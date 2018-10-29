@@ -1,14 +1,16 @@
 # Nucleoid
 
+[![NPM Version][npm-image]][npm-url]
+
 ### 簡介(overview)
 
 #### 中文:
 
-Nucleoid是基於Promise的流程控制系統，起初目的為cloud functios流程處理，因此會有些不合常理的嚴格判定，但Nucleoid並沒有限制運行環境與使用方向。
+Nucleoid是基於Promise的流程控制系統，起初目的為cloud functions流程處理，因此會有些不合常理的嚴格判定，但Nucleoid並沒有限制運行環境與使用方向。
 
 #### english:
 
-Nucleoid is a Promise based process control system. The original purpose is to process the cloud functios, So there will be some unreasonable strict judgments, But Nucleoid does not limit the operating environment and direction of use.
+Nucleoid is a Promise based process control system. The original purpose is to process the cloud functions, So there will be some unreasonable strict judgments, But Nucleoid does not limit the operating environment and direction of use.
 
 ### 安裝(install)
 
@@ -161,3 +163,6 @@ nuc.transcription().then((data)=>{
     }
 }
 ```
+
+[npm-image]: https://img.shields.io/npm/v/nucleoid.svg
+[npm-url]: https://npmjs.org/package/nucleoid
