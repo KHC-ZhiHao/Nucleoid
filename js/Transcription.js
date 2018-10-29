@@ -167,15 +167,16 @@ class Transcription extends ModuleBase {
                 this.timeout = null;
             }
             clearInterval(this.interval);
+            let status = {
+                name : this.name,
+                step : this.stack.slice(-1)[0].step,
+                stack : this.stack,
+            }
             if( this.nucleoid.terminator ){
-                this.nucleoid.terminator(this.nucleoid.messenger);
+                this.nucleoid.terminator(this.nucleoid.messenger, status);
             }
             this.callback({
-                status : {
-                    name : this.name,
-                    step : this.stack.slice(-1)[0].step,
-                    stack : this.stack,
-                },
+                status : status,
                 messenger : this.nucleoid.messenger,
             });
         } else {

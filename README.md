@@ -44,7 +44,7 @@ nuc.addMessenger('count', 0);
 Set promoter, Run at the beginning, Can use exit method.
 
 ```js
-nuc.setPromoter(((messenger, exit)=>{
+nuc.setPromoter((messenger, exit)=>{
     if( messenger.count !== 0 ){
         exit()
     }
@@ -58,7 +58,7 @@ nuc.setPromoter(((messenger, exit)=>{
 Set mediator, Run at the queue middle, Can use exit method.
 
 ```js
-nuc.setMediator(((messenger, exit)=>{
+nuc.setMediator((messenger, exit)=>{
     if( messenger.count === 0 ){
         exit()
     }
@@ -67,12 +67,12 @@ nuc.setMediator(((messenger, exit)=>{
 
 #### Terminator
 
-設定終結點，當運行exit或流程結束時運行
+設定終結點，當運行exit或流程結束時運行，你可以在此修改輸出的status
 
-Set terminator, Run at the exit or end of process.
+Set terminator, Run at the exit or end of process. You can rewrite status on here.
 
 ```js
-nuc.setTerminator((messenger)=>{
+nuc.setTerminator((messenger, status)=>{
     console.log('finish!')
 })
 ```
