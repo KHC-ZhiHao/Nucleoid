@@ -122,7 +122,10 @@ Transcription will return a Promise object and run the entire process, And each 
 >The stack start attribute is the starting runtime, Based on the determination of whether there is an api that takes too long to respond, But this time is not accurate and is for reference only.
 
 ```js
-nuc.transcription().then((data)=>{
+//Trymode為測試模式，當你開啟他時，會將每個貯列使用try-catch宣告，當遇到catch時則宣告exit並丟出error
+//Trymode default false, If open every queue call try-catch, Exits and throws an error when it encounters a capture.
+let trymode = true
+nuc.transcription(trymode).then((data)=>{
     console.log(data)
 })
 

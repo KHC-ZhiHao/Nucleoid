@@ -139,12 +139,12 @@ class Nucleoid extends ModuleBase {
      * @returns {Promise}
      */
 
-    transcription(){
+    transcription(trymode = false){
         this.transcription = function(){
             console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
         }
         return new Promise(( resolve )=>{
-            new Transcription( this, resolve )
+            new Transcription( this, resolve, trymode )
         })
     }
 

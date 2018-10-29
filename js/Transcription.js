@@ -5,11 +5,12 @@
 
 class Transcription extends ModuleBase {
 
-    constructor( nucleoid, callback ){
+    constructor( nucleoid, callback, trymode = false ){
         super("Transcription");
         this.name = "";
         this.stack = [];
         this.finish = false;
+        this.trymode = trymode;
         this.runIndex = 0;
         this.callback = callback;
         this.nucleoid = nucleoid;
@@ -26,7 +27,7 @@ class Transcription extends ModuleBase {
     validateNucleoid(){
         if( this.validate() ){
             this.name = this.nucleoid.name;
-            this.runtime.next();
+            this.next();
         }
     }
 
@@ -169,7 +170,7 @@ class Transcription extends ModuleBase {
             clearInterval(this.interval);
             let status = {
                 name : this.name,
-                step : this.stack.slice(-1)[0].step,
+                step : this.stack.slice(-1)[0].step.split(":")[0],
                 stack : this.stack,
             }
             if( this.nucleoid.terminator ){
@@ -196,7 +197,16 @@ class Transcription extends ModuleBase {
                 this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
             }
             setTimeout(()=>{
-                this.runtime.next();
+                if( this.trymode ){
+                    try{
+                        this.runtime.next();
+                    } catch (e) {
+                        this.addStack('catch: ' + e);
+                        this.exit();
+                    }
+                } else {
+                    this.runtime.next();
+                }
             }, 1)
         }
     }

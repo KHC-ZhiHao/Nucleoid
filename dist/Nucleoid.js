@@ -1,3 +1,5 @@
+
+
 (function (root, factory) {
 
     let moduleName = 'Nucleoid';
@@ -13,11 +15,11 @@
     }
 
 })(this || (typeof window !== 'undefined' ? window : global), function () {
-
+    
     /**
-    * @class ModuleBase()
-    * @desc 系統殼層
-    */
+     * @class ModuleBase()
+     * @desc 系統殼層
+     */
 
     class ModuleBase {
 
@@ -47,11 +49,12 @@
 
     class Transcription extends ModuleBase {
 
-        constructor(nucleoid, callback) {
+        constructor(nucleoid, callback, trymode = false) {
             super("Transcription");
             this.name = "";
             this.stack = [];
             this.finish = false;
+            this.trymode = trymode;
             this.runIndex = 0;
             this.callback = callback;
             this.nucleoid = nucleoid;
@@ -68,7 +71,7 @@
         validateNucleoid() {
             if (this.validate()) {
                 this.name = this.nucleoid.name;
-                this.runtime.next();
+                this.next();
             }
         }
 
@@ -211,7 +214,7 @@
                 clearInterval(this.interval);
                 let status = {
                     name: this.name,
-                    step: this.stack.slice(-1)[0].step,
+                    step: this.stack.slice(-1)[0].step.split(":")[0],
                     stack: this.stack,
                 }
                 if (this.nucleoid.terminator) {
@@ -238,7 +241,16 @@
                     this.nucleoid.mediator(this.nucleoid.messenger, this.exit.bind(this))
                 }
                 setTimeout(() => {
-                    this.runtime.next();
+                    if (this.trymode) {
+                        try {
+                            this.runtime.next();
+                        } catch (e) {
+                            this.addStack('catch: ' + e);
+                            this.exit();
+                        }
+                    } else {
+                        this.runtime.next();
+                    }
                 }, 1)
             }
         }
@@ -386,12 +398,12 @@
          * @returns {Promise}
          */
 
-        transcription() {
+        transcription(trymode = false) {
             this.transcription = function () {
                 console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
             }
             return new Promise((resolve) => {
-                new Transcription(this, resolve)
+                new Transcription(this, resolve, trymode)
             })
         }
 
