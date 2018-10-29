@@ -22,7 +22,7 @@ $ npm i nucleoid
 ### 如何開始(How to use)
 
 ```js
-let Nucleoid = require('Nucleoid')
+let Nucleoid = require('nucleoid')
 let nuc = new Nucleoid()
     nuc.setName('demo');
 ```
