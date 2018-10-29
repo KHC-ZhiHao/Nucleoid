@@ -1,0 +1,26 @@
+{
+  "name": "nucleoid",
+  "version": "1.0.0",
+  "description": "Nucleoid is a Promise based process control system.",
+  "main": "./dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KHC-ZhiHao/Nucleoid.git"
+  },
+  "keywords": [
+    "lambda",
+    "google cloud functions",
+    "azure functions",
+    "function process",
+    "promise"
+  ],
+  "author": "khczhihao",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/KHC-ZhiHao/Nucleoid/issues"
+  },
+  "homepage": "https://github.com/KHC-ZhiHao/Nucleoid#readme"
+}
