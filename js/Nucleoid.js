@@ -9,6 +9,7 @@ class Nucleoid extends ModuleBase {
         super("Nucleoid");
         this.genes = [];
         this.trymode = false;
+        this.trymodeError = null;
         this.timeout = 3600;
         this.timeoutError = null;
         this.promoter = null;
@@ -37,15 +38,25 @@ class Nucleoid extends ModuleBase {
      */
 
     setTimeout( timeout, error ){
-        if( typeof timeout === "number" ){
-            if( typeof error === "function" ){
-                this.timeout = timeout;
-                this.timeoutError = error;
-            } else {
-                this.systemError( 'setTimeout', 'Error not a function.', error );
-            }
+        if( typeof timeout === "number" && typeof error === "function" ){
+            this.timeout = timeout;
+            this.timeoutError = error;
         } else {
-            this.systemError( 'setTimeout', 'Timeout not a number.', timeout );
+            this.systemError( 'setTimeout', 'Params type error. try setTimeout(number, function)' );
+        }
+    }
+
+    /** 
+     * @function setTrymode(open,error)
+     * @desc 設定try-catch模式
+     */
+
+    setTrymode( open, error ){
+        if( typeof open === "boolean" && ( typeof error === "function" || error == null ) ){
+            this.trymode = mode;
+            this.trymodeError = error;
+        } else {
+            this.systemError( 'setTrymode', 'Params type error, try setTrymode(boolean, function).' );
         }
     }
 

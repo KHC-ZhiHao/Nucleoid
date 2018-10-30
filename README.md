@@ -6,15 +6,24 @@
 
 #### 中文:
 
+對於雲端服務在建構的過程中，除錯、驗證、request-response等響應往往要搭配複合式的服務去建立，這讓我們在編寫cloud function時得花很長的時間去尋找查詢方向，且在迭代器的處理也沒有足夠底層能應付各類狀況。
+
+而serverless的誕生讓組件的共用性提高，因此能夠擔任偽週期處理的Nucleoid就此誕生。
+
 Nucleoid是基於Promise的流程控制系統，起初目的為cloud functions流程處理，因此會有些不合常理的嚴格判定，但Nucleoid並沒有限制運行環境與使用方向。
 
 #### english:
+
+>以下翻譯都來自 google translate，等待高人出手相救
+
+In the process of constructing the cloud service, the response, debugging, re-application and response are often combined with the composite service, which makes it take a long time to find the query direction when writing the cloud function. There is not enough bottom layer in the iterator to handle various situations.
+
+The absence of a server has increased the commonality of components, so the class that can be used as a pseudo-cycle is born.
 
 Nucleoid is a Promise based process control system. The original purpose is to process the cloud functions, So there will be some unreasonable strict judgments, But Nucleoid does not limit the operating environment and direction of use.
 
 ### 安裝(install)
 
-node & webpack
 ```bash
 $ npm i nucleoid
 ```
@@ -31,21 +40,28 @@ let nuc = new Nucleoid()
 
 建立信使，他將協助你在流程中攜帶你所需的物件，並在完成流程後被擲出
 
-Add Messenger, It carrying the objects you need in the process. And thrown after completing.
+Add Messenger, it carrying the objects you need in the process. And thrown after completing.
 
 ```js
-nuc.addMessenger('count', 0);
+//devMessage is private message.
+nuc.addMessenger('body', '');
+nuc.addMessenger('statusCode', null);
+nuc.addMessenger('queryParam', Math.round(Math.random()));
+nuc.addMessenger('devMessage', null);
 ```
 
 #### Promoter
 
 設定啟動子，在運行時呼叫並可以判定是否跳出
 
-Set promoter, Run at the beginning, Can use exit method.
+Set promoter, run at the beginning, can use exit method.
 
 ```js
 nuc.setPromoter((messenger, exit)=>{
-    if( messenger.count !== 0 ){
+    if( messenger.statusCode !== null ){
+        messenger.body = 'Unknown error';
+        messenger.statusCode = 500;
+        messenger.devMessage = 'Status Code already exists.'
         exit()
     }
 });
@@ -55,11 +71,12 @@ nuc.setPromoter((messenger, exit)=>{
 
 設定中介者，在每次呼叫貯列後運行，可以判定是否跳出
 
-Set mediator, Run at the queue middle, Can use exit method.
+Set mediator, run at the queue middle, can use exit method.
 
 ```js
+//Watch status code have change.
 nuc.setMediator((messenger, exit)=>{
-    if( messenger.count === 0 ){
+    if( messenger.statusCode !== null ){
         exit()
     }
 });
@@ -69,11 +86,15 @@ nuc.setMediator((messenger, exit)=>{
 
 設定終結點，當運行exit或流程結束時運行，你可以在此修改輸出的status
 
-Set terminator, Run at the exit or end of process. You can rewrite status on here.
+Set terminator, run at the exit or end of process. You can rewrite status on here.
 
 ```js
 nuc.setTerminator((messenger, status)=>{
-    console.log('finish!')
+    if( messenger.statusCode !== 200 ){
+        status.errorCode = messenger.statusCode
+        status.devMessage = messenger.devMessage
+        broadcast(status) //You custom broadcast system
+    }
 })
 ```
 
@@ -82,12 +103,27 @@ nuc.setTerminator((messenger, status)=>{
 設定逾時，整體流程運行時間超過時跳出並執行
 >基於javascript單線程設計，這裡設定的時間並不準確，若在cloud function的運行環境請預留更多的判定時間
 
-Set timeout, Break out and execute when the overall process runs longer than.
->Based on javascript single-threaded design, The time set here is not accurate. If you are in the cloud function environment, Please reserve more judgment time.
+Set timeout, break out and execute when the overall process runs longer than.
+>Based on javascript single-threaded design, the time set here is not accurate. If you are in the cloud function environment, please reserve more judgment time.
 
 ```js
 nuc.setTimeout( 3000, (messenger)=>{
-    console.log('time out!')
+    messenger.statusCode = 504;
+    messenger.body = 'Time out';
+})
+```
+
+#### Try-Catch-mode
+
+Trymode為測試模式，當你開啟他時，會將每個貯列使用try-catch宣告，當遇到catch時則宣告exit並丟出exception
+
+Trymode default false, if open and every queue try-catch call, exits and throws exception when it encounters a capture.
+
+```js
+nuc.setTrymode( true, (messenger, exception)=>{
+    messenger.body = 'Unknown error';
+    messenger.statusCode = 500;
+    messenger.devMessage = 'exception:' + exception;
 })
 ```
 
@@ -95,7 +131,7 @@ nuc.setTimeout( 3000, (messenger)=>{
 
 建立流程貯列，在呼叫運行時依序運行。
 
-Create queue function, Run sequentially while the call is running.
+Create queue function, run sequentially while the call is running.
 
 ```js
 nuc.queue( 'add_count', (messenger, next)=>{
@@ -103,9 +139,16 @@ nuc.queue( 'add_count', (messenger, next)=>{
     next()
 })
 
-nuc.queue( 'add_count_2', (messenger, next)=>{
+nuc.queue( 'add_count_for_query', (messenger, next)=>{
     setTimeout(()=>{
-        messenger.count += 1;
+        messenger.count += 1 + messenger.queryParam;
+        if( messenger.count === 3 ){
+            messenger.body = 'ok! drink coffee.';
+            messenger.statusCode = 200;
+        } else {
+            messenger.body = 'ok! drink tea.';
+            messenger.statusCode = 418;
+        }
         next()
     }, 1000)
 })
@@ -117,23 +160,27 @@ transcription 將回傳一個 Promise 物件，並運行整個流程，每一個
 
 >關於 stack start 屬性為起始運行時間，基於判定是否有回應時間過長的api，但此時間是不準確的，僅供參考。
 
-Transcription will return a Promise object and run the entire process, And each instantiated Nucleoid can only be run once.
+Transcription will return a Promise object and run the entire process, and each instantiated Nucleoid can only be run once.
 
->The stack start attribute is the starting runtime, Based on the determination of whether there is an api that takes too long to respond, But this time is not accurate and is for reference only.
+>The stack start attribute is the starting runtime, based on the determination of whether there is an api that takes too long to respond, but this time is not accurate and is for reference only.
 
 ```js
-//Trymode為測試模式，當你開啟他時，會將每個貯列使用try-catch宣告，當遇到catch時則宣告exit並丟出error
-//Trymode default false, If open and every queue try-catch call, Exits and throws error when it encounters a capture.
-nuc.trymode = true
-nuc.transcription().then((data)=>{
-    console.log(data)
-})
-
-//data
+//In aws lambda
+exports.handler = async(event, context, callback) => {
+    let response = await nuc.transcription()
+    return callback(null, {
+        statusCode: response.messenger.statusCode,
+        body: response.messenger.body,
+    });
+}
+```
+Transcription output data :
+```json
 {
     "status": {
         "name": "demo",
         "step": "finish",
+        "mode": "try-catch-mode",
         "stack": [
             {
                 "step": "promoter",
@@ -148,7 +195,7 @@ nuc.transcription().then((data)=>{
                 "start": 0
             },
             {
-                "step": "queue:add_count_2",
+                "step": "queue:add_count_for_query",
                 "start": 1
             },
             {
@@ -162,7 +209,10 @@ nuc.transcription().then((data)=>{
         ]
     },
     "messenger": {
-        "count": 2
+        "count": 3,
+        "body": "ok! drink coffee.",
+        "statusCode": 200,
+        "queryParam": 1,
     }
 }
 ```

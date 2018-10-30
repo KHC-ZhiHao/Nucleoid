@@ -39,6 +39,7 @@ class Transcription extends ModuleBase {
         let template = {
             name : [true, 'string'],
             trymode : [true, 'boolean'],
+            trymodeError : [false, 'function'],
             timeout : [false, 'number'],
             timeoutError : [false, 'function'],
             promoter : [false, 'function'],
@@ -53,7 +54,7 @@ class Transcription extends ModuleBase {
                 this.systemError( 'validateNucleoid', `Data ${key} must required.`, target );
                 return false;
             }
-            if( template[key][1] !== typeof target ){
+            if( target !== null && template[key][1] !== typeof target ){
                 this.systemError( 'validateNucleoid', `Data type must ${template[key][1]}.`, target );
                 return false;
             }
@@ -201,7 +202,10 @@ class Transcription extends ModuleBase {
                 if( this.nucleoid.trymode ){
                     try{
                         this.runtime.next();
-                    } catch (e) {
+                    } catch (exception) {
+                        if( this.nucleoid.trymodeError ){
+                            this.nucleoid.trymodeError( this.nucleoid.messenger, exception )
+                        }
                         this.addStack('catch: ' + e);
                         this.exit();
                     }

@@ -1,5 +1,3 @@
-
-
 (function (root, factory) {
 
     let moduleName = 'Nucleoid';
@@ -83,6 +81,7 @@
             let template = {
                 name: [true, 'string'],
                 trymode: [true, 'boolean'],
+                trymodeError: [false, 'function'],
                 timeout: [false, 'number'],
                 timeoutError: [false, 'function'],
                 promoter: [false, 'function'],
@@ -97,7 +96,7 @@
                     this.systemError('validateNucleoid', `Data ${key} must required.`, target);
                     return false;
                 }
-                if (template[key][1] !== typeof target) {
+                if (target !== null && template[key][1] !== typeof target) {
                     this.systemError('validateNucleoid', `Data type must ${template[key][1]}.`, target);
                     return false;
                 }
@@ -245,7 +244,10 @@
                     if (this.nucleoid.trymode) {
                         try {
                             this.runtime.next();
-                        } catch (e) {
+                        } catch (exception) {
+                            if (this.nucleoid.trymodeError) {
+                                this.nucleoid.trymodeError(this.nucleoid.messenger, exception)
+                            }
                             this.addStack('catch: ' + e);
                             this.exit();
                         }
@@ -257,6 +259,7 @@
         }
 
     }
+
     /**
      * @class Nucleoid()
      * @desc 核心
@@ -268,6 +271,7 @@
             super("Nucleoid");
             this.genes = [];
             this.trymode = false;
+            this.trymodeError = null;
             this.timeout = 3600;
             this.timeoutError = null;
             this.promoter = null;
@@ -296,15 +300,25 @@
          */
 
         setTimeout(timeout, error) {
-            if (typeof timeout === "number") {
-                if (typeof error === "function") {
-                    this.timeout = timeout;
-                    this.timeoutError = error;
-                } else {
-                    this.systemError('setTimeout', 'Error not a function.', error);
-                }
+            if (typeof timeout === "number" && typeof error === "function") {
+                this.timeout = timeout;
+                this.timeoutError = error;
             } else {
-                this.systemError('setTimeout', 'Timeout not a number.', timeout);
+                this.systemError('setTimeout', 'Params type error. try setTimeout(number, function)');
+            }
+        }
+
+        /** 
+         * @function setTrymode(open,error)
+         * @desc 設定try-catch模式
+         */
+
+        setTrymode(open, error) {
+            if (typeof open === "boolean" && (typeof error === "function" || error == null)) {
+                this.trymode = mode;
+                this.trymodeError = error;
+            } else {
+                this.systemError('setTrymode', 'Params type error, try setTrymode(boolean, function).');
             }
         }
 
