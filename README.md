@@ -123,9 +123,9 @@ Transcription will return a Promise object and run the entire process, And each 
 
 ```js
 //Trymode為測試模式，當你開啟他時，會將每個貯列使用try-catch宣告，當遇到catch時則宣告exit並丟出error
-//Trymode default false, If open every queue call try-catch, Exits and throws an error when it encounters a capture.
-let trymode = true
-nuc.transcription(trymode).then((data)=>{
+//Trymode default false, If open and every queue try-catch call, Exits and throws error when it encounters a capture.
+nuc.trymode = true
+nuc.transcription().then((data)=>{
     console.log(data)
 })
 

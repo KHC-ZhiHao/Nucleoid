@@ -8,6 +8,7 @@ class Nucleoid extends ModuleBase {
     constructor(){
         super("Nucleoid");
         this.genes = [];
+        this.trymode = false;
         this.timeout = 3600;
         this.timeoutError = null;
         this.promoter = null;
@@ -143,8 +144,11 @@ class Nucleoid extends ModuleBase {
         this.transcription = function(){
             console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
         }
+        if( trymode ){
+            this.trymode = trymode
+        }
         return new Promise(( resolve )=>{
-            new Transcription( this, resolve, trymode )
+            new Transcription( this, resolve )
         })
     }
 

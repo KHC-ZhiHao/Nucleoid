@@ -15,7 +15,7 @@
     }
 
 })(this || (typeof window !== 'undefined' ? window : global), function () {
-    
+
     /**
      * @class ModuleBase()
      * @desc 系統殼層
@@ -49,12 +49,11 @@
 
     class Transcription extends ModuleBase {
 
-        constructor(nucleoid, callback, trymode = false) {
+        constructor(nucleoid, callback) {
             super("Transcription");
             this.name = "";
             this.stack = [];
             this.finish = false;
-            this.trymode = trymode;
             this.runIndex = 0;
             this.callback = callback;
             this.nucleoid = nucleoid;
@@ -83,6 +82,7 @@
         validate() {
             let template = {
                 name: [true, 'string'],
+                trymode: [true, 'boolean'],
                 timeout: [false, 'number'],
                 timeoutError: [false, 'function'],
                 promoter: [false, 'function'],
@@ -214,6 +214,7 @@
                 clearInterval(this.interval);
                 let status = {
                     name: this.name,
+                    mode: this.nucleoid.trymode ? 'try-catch-mode' : 'normal',
                     step: this.stack.slice(-1)[0].step.split(":")[0],
                     stack: this.stack,
                 }
@@ -241,7 +242,7 @@
                     this.nucleoid.mediator(this.nucleoid.messenger, this.exit.bind(this))
                 }
                 setTimeout(() => {
-                    if (this.trymode) {
+                    if (this.nucleoid.trymode) {
                         try {
                             this.runtime.next();
                         } catch (e) {
@@ -256,7 +257,6 @@
         }
 
     }
-
     /**
      * @class Nucleoid()
      * @desc 核心
@@ -267,6 +267,7 @@
         constructor() {
             super("Nucleoid");
             this.genes = [];
+            this.trymode = false;
             this.timeout = 3600;
             this.timeoutError = null;
             this.promoter = null;
@@ -402,8 +403,11 @@
             this.transcription = function () {
                 console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
             }
+            if (trymode) {
+                this.trymode = trymode
+            }
             return new Promise((resolve) => {
-                new Transcription(this, resolve, trymode)
+                new Transcription(this, resolve)
             })
         }
 

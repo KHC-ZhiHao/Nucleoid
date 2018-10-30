@@ -5,12 +5,11 @@
 
 class Transcription extends ModuleBase {
 
-    constructor( nucleoid, callback, trymode = false ){
+    constructor( nucleoid, callback ){
         super("Transcription");
         this.name = "";
         this.stack = [];
         this.finish = false;
-        this.trymode = trymode;
         this.runIndex = 0;
         this.callback = callback;
         this.nucleoid = nucleoid;
@@ -39,6 +38,7 @@ class Transcription extends ModuleBase {
     validate(){
         let template = {
             name : [true, 'string'],
+            trymode : [true, 'boolean'],
             timeout : [false, 'number'],
             timeoutError : [false, 'function'],
             promoter : [false, 'function'],
@@ -170,6 +170,7 @@ class Transcription extends ModuleBase {
             clearInterval(this.interval);
             let status = {
                 name : this.name,
+                mode : this.nucleoid.trymode ? 'try-catch-mode' : 'normal',
                 step : this.stack.slice(-1)[0].step.split(":")[0],
                 stack : this.stack,
             }
@@ -197,7 +198,7 @@ class Transcription extends ModuleBase {
                 this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
             }
             setTimeout(()=>{
-                if( this.trymode ){
+                if( this.nucleoid.trymode ){
                     try{
                         this.runtime.next();
                     } catch (e) {
