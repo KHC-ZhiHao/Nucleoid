@@ -1,3 +1,5 @@
+
+
 (function (root, factory) {
 
     let moduleName = 'Nucleoid';
@@ -13,7 +15,7 @@
     }
 
 })(this || (typeof window !== 'undefined' ? window : global), function () {
-
+    
     /**
      * @class ModuleBase()
      * @desc 系統殼層
@@ -248,7 +250,7 @@
                             if (this.nucleoid.trymodeError) {
                                 this.nucleoid.trymodeError(this.nucleoid.messenger, exception)
                             }
-                            this.addStack('catch: ' + e);
+                            this.addStack('catch: ' + exception);
                             this.exit();
                         }
                     } else {
@@ -315,7 +317,7 @@
 
         setTrymode(open, error) {
             if (typeof open === "boolean" && (typeof error === "function" || error == null)) {
-                this.trymode = mode;
+                this.trymode = open;
                 this.trymodeError = error;
             } else {
                 this.systemError('setTrymode', 'Params type error, try setTrymode(boolean, function).');

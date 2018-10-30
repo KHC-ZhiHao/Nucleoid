@@ -123,7 +123,7 @@ Trymode default false, if open and every queue try-catch call, exits and throws 
 nuc.setTrymode( true, (messenger, exception)=>{
     messenger.body = 'Unknown error';
     messenger.statusCode = 500;
-    messenger.devMessage = 'exception:' + exception;
+    messenger.devMessage = 'exception:' + exception.message;
 })
 ```
 

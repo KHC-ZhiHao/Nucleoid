@@ -53,7 +53,7 @@ class Nucleoid extends ModuleBase {
 
     setTrymode( open, error ){
         if( typeof open === "boolean" && ( typeof error === "function" || error == null ) ){
-            this.trymode = mode;
+            this.trymode = open;
             this.trymodeError = error;
         } else {
             this.systemError( 'setTrymode', 'Params type error, try setTrymode(boolean, function).' );

@@ -206,7 +206,7 @@ class Transcription extends ModuleBase {
                         if( this.nucleoid.trymodeError ){
                             this.nucleoid.trymodeError( this.nucleoid.messenger, exception )
                         }
-                        this.addStack('catch: ' + e);
+                        this.addStack('catch: ' + exception);
                         this.exit();
                     }
                 } else {
