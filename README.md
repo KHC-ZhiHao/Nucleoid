@@ -217,5 +217,11 @@ Transcription output data :
 }
 ```
 
+### 注意(warning)
+
+只適用於ES6以上的版本
+
+Only support ES6 version and up .
+
 [npm-image]: https://img.shields.io/npm/v/nucleoid.svg
 [npm-url]: https://npmjs.org/package/nucleoid

@@ -15,7 +15,7 @@
     }
 
 })(this || (typeof window !== 'undefined' ? window : global), function () {
-    
+
     /**
      * @class ModuleBase()
      * @desc 系統殼層
@@ -88,7 +88,7 @@
                 timeoutError: [false, 'function'],
                 promoter: [false, 'function'],
                 messenger: [true, 'object'],
-                mediator: [true, 'function'],
+                mediator: [false, 'function'],
                 terminator: [false, 'function'],
             }
             //method
@@ -194,11 +194,6 @@
                 this.now += 1
             }, 1)
         }
-
-        //=============================
-        //
-        // api
-        //
 
         /**
          * @function exit()

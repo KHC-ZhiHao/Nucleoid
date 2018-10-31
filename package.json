@@ -1,8 +1,8 @@
 {
   "name": "nucleoid",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Nucleoid is a Promise based process control system.",
-  "main": "./dist/Nucleoid.js",
+  "main": "./dist/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },

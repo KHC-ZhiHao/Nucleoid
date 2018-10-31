@@ -44,7 +44,7 @@ class Transcription extends ModuleBase {
             timeoutError : [false, 'function'],
             promoter : [false, 'function'],
             messenger : [true, 'object'],
-            mediator : [true, 'function'],
+            mediator : [false, 'function'],
             terminator : [false, 'function'],
         }
         //method
