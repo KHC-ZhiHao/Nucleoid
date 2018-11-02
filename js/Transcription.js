@@ -45,9 +45,10 @@ class Transcription extends ModuleBase {
             promoter : [false, 'function'],
             messenger : [true, 'object'],
             mediator : [false, 'function'],
+            methods : [false, 'object'],
             terminator : [false, 'function'],
         }
-        //method
+        //cycle
         for( let key in template ){
             let target = this.nucleoid[key];
             if( template[key][0] && target == null ){
@@ -121,7 +122,7 @@ class Transcription extends ModuleBase {
                             } else {
                                 console.warn(`Nucleoid(${self.nucleoid.name}) => Next already called.`)
                             }
-                        })
+                        }, self.nucleoid.methods)
                         self.runIndex += 1;
                     }
                 }

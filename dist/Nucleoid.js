@@ -1,5 +1,3 @@
-
-
 (function (root, factory) {
 
     let moduleName = 'Nucleoid';
@@ -17,9 +15,9 @@
 })(this || (typeof window !== 'undefined' ? window : global), function () {
 
     /**
-     * @class ModuleBase()
-     * @desc 系統殼層
-     */
+    * @class ModuleBase()
+    * @desc 系統殼層
+    */
 
     class ModuleBase {
 
@@ -41,6 +39,39 @@
         }
 
     }
+
+    class Methods extends ModuleBase {
+
+        constructor() {
+            super("Methods")
+            this.bases = {}
+            this.stores = {}
+        }
+
+        regster(name, method) {
+            if (this.bases[name] == null) {
+                this.bases[name] = method
+                this.stores[name] = {};
+            } else {
+                this.systemError('regster', 'Method name already exists.', name)
+            }
+        }
+
+        use(name) {
+            if (this.bases[name]) {
+                let action = this.bases[name](this.stores[name]);
+                return {
+                    store: this.stores[name],
+                    action: action
+                }
+            } else {
+                this.systemError('use', 'Method not found.', name)
+            }
+        }
+
+    }
+
+    let MethodBucket = new Methods()
 
     /**
      * @class Transcription(nucleoid,callback)
@@ -89,9 +120,10 @@
                 promoter: [false, 'function'],
                 messenger: [true, 'object'],
                 mediator: [false, 'function'],
+                methods: [false, 'object'],
                 terminator: [false, 'function'],
             }
-            //method
+            //cycle
             for (let key in template) {
                 let target = this.nucleoid[key];
                 if (template[key][0] && target == null) {
@@ -165,7 +197,7 @@
                                 } else {
                                     console.warn(`Nucleoid(${self.nucleoid.name}) => Next already called.`)
                                 }
-                            })
+                            }, self.nucleoid.methods)
                             self.runIndex += 1;
                         }
                     }
@@ -194,6 +226,11 @@
                 this.now += 1
             }, 1)
         }
+
+        //=============================
+        //
+        // api
+        //
 
         /**
          * @function exit()
@@ -275,7 +312,16 @@
             this.mediator = null;
             this.terminator = null;
             this.messenger = {};
+            this.methods = {};
             this.setName('No name');
+        }
+
+        static regsterMethod(name, method) {
+            if (typeof method === "function" && typeof name === "string") {
+                MethodBucket.regster(name, method);
+            } else {
+                this.systemError('regster', 'Params type error, try regsterMethod(string, function).', name)
+            }
         }
 
         /**
@@ -330,6 +376,19 @@
                 this.messenger[key] = value
             } else {
                 this.systemError('addMessenger', 'Messenger key already exists.', key);
+            }
+        }
+
+        /**
+         * @function use(name)
+         * @desc 使用一個以註冊的方法
+         */
+
+        use(name) {
+            if (this.methods[name] == null) {
+                this.methods[name] = MethodBucket.use(name)
+            } else {
+                this.systemError('use', 'Method already exists.', name);
             }
         }
 

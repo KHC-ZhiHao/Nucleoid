@@ -32,8 +32,34 @@ $ npm i nucleoid
 
 ```js
 let Nucleoid = require('nucleoid')
+```
+
+#### Methods
+
+設定全域方法，可以個別導入貯列中，協助封裝與效能優化系統，再被使用前封裝內容不會被宣告，你不必再每次呼叫時引入不必要的套件
+
+Set the global method, which can be introduced separately in the storage, assist the packaging and performance optimization system, and the package content will not be announced before being used. You don't have to introduce unnecessary kits every time you call.
+
+```js
+Nucleoid.regsterMethod('helloWorld', (store) => {
+    //you can use require() on here
+    store.hello = 'hello ';
+    return function(){
+        return 'world!';
+    }
+})
+```
+
+#### Set Name And Use Method
+
+建立與設定名稱
+
+Create and set a name
+
+```js
 let nuc = new Nucleoid()
     nuc.setName('demo');
+    nuc.use('helloWorld');
 ```
 
 #### Messenger
@@ -134,12 +160,14 @@ nuc.setTrymode( true, (messenger, exception)=>{
 Create queue function, run sequentially while the call is running.
 
 ```js
-nuc.queue( 'add_count', (messenger, next)=>{
+nuc.queue( 'add_count', (messenger, next, methods)=>{
+    let hello = methods.helloWorld.store.hello
+    messenger.helloworld = hello + methods.helloWorld.action()
     messenger.count += 1;
     next()
 })
 
-nuc.queue( 'add_count_for_query', (messenger, next)=>{
+nuc.queue( 'add_count_for_query', (messenger, next, methods)=>{
     setTimeout(()=>{
         messenger.count += 1 + messenger.queryParam;
         if( messenger.count === 3 ){
@@ -213,6 +241,7 @@ Transcription output data :
         "body": "ok! drink coffee.",
         "statusCode": 200,
         "queryParam": 1,
+        "helloworld": "hello world!"
     }
 }
 ```

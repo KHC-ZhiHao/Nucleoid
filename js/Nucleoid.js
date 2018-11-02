@@ -16,7 +16,16 @@ class Nucleoid extends ModuleBase {
         this.mediator = null;
         this.terminator = null;
         this.messenger = {};
+        this.methods = {};
         this.setName('No name');
+    }
+
+    static regsterMethod(name, method) {
+        if( typeof method === "function" && typeof name === "string" ){
+            MethodBucket.regster(name, method);
+        } else {
+            this.systemError('regster', 'Params type error, try regsterMethod(string, function).', name)
+        }
     }
 
     /**
@@ -71,6 +80,19 @@ class Nucleoid extends ModuleBase {
             this.messenger[key] = value
         } else {
             this.systemError('addMessenger', 'Messenger key already exists.', key );
+        }
+    }
+
+    /**
+     * @function use(name)
+     * @desc 使用一個以註冊的方法
+     */
+
+    use(name){
+        if( this.methods[name] == null ){
+            this.methods[name] = MethodBucket.use(name)
+        } else {
+            this.systemError('use', 'Method already exists.', name );
         }
     }
 
