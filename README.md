@@ -48,13 +48,16 @@ Nucleoid.regsterMethod('helloWorld', (store) => {
         return 'world!';
     }
 })
+
+//hasMethod prevent of the nodejs require() cache.
+Nucleoid.hasMethod('helloWorld') //return true
 ```
 
 #### Set Name And Use Method
 
-建立與設定名稱
+建立與設定名稱，並引用Method
 
-Create and set a name
+Create and set a name, and use method.
 
 ```js
 let nuc = new Nucleoid()
@@ -161,8 +164,8 @@ Create queue function, run sequentially while the call is running.
 
 ```js
 nuc.queue( 'add_count', (messenger, next, methods)=>{
-    let hello = methods.helloWorld.store.hello
-    messenger.helloworld = hello + methods.helloWorld.action()
+    let hello = methods('helloWorld').store.hello
+    messenger.helloworld = hello + methods('helloWorld').action()
     messenger.count += 1;
     next()
 })
@@ -208,7 +211,10 @@ Transcription output data :
     "status": {
         "name": "demo",
         "step": "finish",
-        "mode": "try-catch-mode",
+        "mode": [
+            "try-catch-mode",
+            "timeout"
+        ],
         "stack": [
             {
                 "step": "promoter",
@@ -234,6 +240,12 @@ Transcription output data :
                 "step": "finish",
                 "start": 247
             }
+        ],
+        "useMethods": [
+            "helloWorld"
+        ],
+        "usedMethods": [
+            "helloWorld"
         ]
     },
     "messenger": {

@@ -20,12 +20,16 @@ class Nucleoid extends ModuleBase {
         this.setName('No name');
     }
 
-    static regsterMethod(name, method) {
+    static regsterMethod( name, method ) {
         if( typeof method === "function" && typeof name === "string" ){
             MethodBucket.regster(name, method);
         } else {
             this.systemError('regster', 'Params type error, try regsterMethod(string, function).', name)
         }
+    }
+
+    static hasMethod(name){
+        return !!MethodBucket.pool[name]
     }
 
     /**
@@ -173,12 +177,9 @@ class Nucleoid extends ModuleBase {
      * @returns {Promise}
      */
 
-    transcription(trymode = false){
+    transcription(){
         this.transcription = function(){
             console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
-        }
-        if( trymode ){
-            this.trymode = trymode
         }
         return new Promise(( resolve )=>{
             new Transcription( this, resolve )

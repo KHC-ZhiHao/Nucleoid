@@ -44,26 +44,22 @@
 
         constructor() {
             super("Methods")
-            this.bases = {}
-            this.stores = {}
+            this.pool = {}
         }
 
         regster(name, method) {
-            if (this.bases[name] == null) {
-                this.bases[name] = method
-                this.stores[name] = {};
+            if (this.pool[name] == null) {
+                this.pool[name] = method
             } else {
                 this.systemError('regster', 'Method name already exists.', name)
             }
         }
 
         use(name) {
-            if (this.bases[name]) {
-                let action = this.bases[name](this.stores[name]);
-                return {
-                    store: this.stores[name],
-                    action: action
-                }
+            if (this.pool[name]) {
+                let store = {}
+                let action = this.pool[name](store);
+                return { store, action }
             } else {
                 this.systemError('use', 'Method not found.', name)
             }
@@ -88,6 +84,7 @@
             this.runIndex = 0;
             this.callback = callback;
             this.nucleoid = nucleoid;
+            this.usedMethods = [];
             this.initTimeOut();
             this.initGenerator();
             this.validateNucleoid();
@@ -172,6 +169,7 @@
             let max = 10000;
             let self = this;
             let exit = this.exit.bind(this);
+            let getMethods = this.getMethods.bind(this)
             let generator = function* () {
                 if (self.nucleoid.timeoutError && self.nucleoid.timeout) {
                     self.timeout = setTimeout(self.timeoutEvent, self.nucleoid.timeout)
@@ -197,7 +195,7 @@
                                 } else {
                                     console.warn(`Nucleoid(${self.nucleoid.name}) => Next already called.`)
                                 }
-                            }, self.nucleoid.methods)
+                            }, getMethods)
                             self.runIndex += 1;
                         }
                     }
@@ -227,6 +225,54 @@
             }, 1)
         }
 
+        /**
+         * @function getMethods()
+         * @desc 獲取使用的模塊
+         */
+
+        getMethods(name) {
+            if (this.nucleoid.methods[name]) {
+                if (this.usedMethods.includes(name) === false) {
+                    this.usedMethods.push(name)
+                }
+                return this.nucleoid.methods[name]
+            } else {
+                this.systemError('getMethods', `Methods(${name}) not found`)
+            }
+        }
+
+        /**
+         * @function getMethods()
+         * @desc 獲取模式
+         */
+
+        getMode() {
+            let mode = [];
+            if (this.nucleoid.trymode) {
+                mode.push('try-catch-mode');
+            }
+            if (this.nucleoid.timeoutError) {
+                mode.push('timeout');
+            }
+            return mode
+        }
+
+        /**
+         * @function createStatus()
+         * @desc 建立狀態
+         */
+
+        createStatus() {
+            return {
+                name: this.name,
+                mode: this.getMode(),
+                step: this.stack.slice(-1)[0].step.split(":")[0],
+                stack: this.stack,
+                useMethods: Object.keys(this.nucleoid.methods),
+                usedMethods: this.usedMethods
+            }
+        }
+
         //=============================
         //
         // api
@@ -245,12 +291,7 @@
                     this.timeout = null;
                 }
                 clearInterval(this.interval);
-                let status = {
-                    name: this.name,
-                    mode: this.nucleoid.trymode ? 'try-catch-mode' : 'normal',
-                    step: this.stack.slice(-1)[0].step.split(":")[0],
-                    stack: this.stack,
-                }
+                let status = this.createStatus();
                 if (this.nucleoid.terminator) {
                     this.nucleoid.terminator(this.nucleoid.messenger, status);
                 }
@@ -322,6 +363,10 @@
             } else {
                 this.systemError('regster', 'Params type error, try regsterMethod(string, function).', name)
             }
+        }
+
+        static hasMethod(name) {
+            return !!MethodBucket.pool[name]
         }
 
         /**
@@ -469,12 +514,9 @@
          * @returns {Promise}
          */
 
-        transcription(trymode = false) {
+        transcription() {
             this.transcription = function () {
                 console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
-            }
-            if (trymode) {
-                this.trymode = trymode
             }
             return new Promise((resolve) => {
                 new Transcription(this, resolve)

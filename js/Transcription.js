@@ -13,6 +13,7 @@ class Transcription extends ModuleBase {
         this.runIndex = 0;
         this.callback = callback;
         this.nucleoid = nucleoid;
+        this.usedMethods = [];
         this.initTimeOut();
         this.initGenerator();
         this.validateNucleoid();
@@ -97,6 +98,7 @@ class Transcription extends ModuleBase {
         let max = 10000;
         let self = this;
         let exit = this.exit.bind(this);
+        let getMethods = this.getMethods.bind(this)
         let generator = function * (){
             if( self.nucleoid.timeoutError && self.nucleoid.timeout ){
                 self.timeout = setTimeout( self.timeoutEvent, self.nucleoid.timeout )
@@ -122,7 +124,7 @@ class Transcription extends ModuleBase {
                             } else {
                                 console.warn(`Nucleoid(${self.nucleoid.name}) => Next already called.`)
                             }
-                        }, self.nucleoid.methods)
+                        }, getMethods)
                         self.runIndex += 1;
                     }
                 }
@@ -152,6 +154,54 @@ class Transcription extends ModuleBase {
         }, 1)
     }
 
+    /**
+     * @function getMethods()
+     * @desc 獲取使用的模塊
+     */
+
+    getMethods(name){
+        if( this.nucleoid.methods[name] ){
+            if( this.usedMethods.includes(name) === false ){
+                this.usedMethods.push(name)
+            }
+            return this.nucleoid.methods[name]
+        } else {
+            this.systemError('getMethods', `Methods(${name}) not found`)
+        }
+    }
+
+    /**
+     * @function getMethods()
+     * @desc 獲取模式
+     */
+
+    getMode(){
+        let mode = [];
+        if( this.nucleoid.trymode ){
+            mode.push('try-catch-mode');
+        }
+        if( this.nucleoid.timeoutError ){
+            mode.push('timeout');
+        }
+        return mode
+    }
+
+    /**
+     * @function createStatus()
+     * @desc 建立狀態
+     */
+
+    createStatus(){
+        return {
+            name : this.name,
+            mode : this.getMode(),
+            step : this.stack.slice(-1)[0].step.split(":")[0],
+            stack : this.stack,
+            useMethods : Object.keys(this.nucleoid.methods),
+            usedMethods : this.usedMethods
+        }
+    }
+
     //=============================
     //
     // api
@@ -170,12 +220,7 @@ class Transcription extends ModuleBase {
                 this.timeout = null;
             }
             clearInterval(this.interval);
-            let status = {
-                name : this.name,
-                mode : this.nucleoid.trymode ? 'try-catch-mode' : 'normal',
-                step : this.stack.slice(-1)[0].step.split(":")[0],
-                stack : this.stack,
-            }
+            let status = this.createStatus();
             if( this.nucleoid.terminator ){
                 this.nucleoid.terminator(this.nucleoid.messenger, status);
             }

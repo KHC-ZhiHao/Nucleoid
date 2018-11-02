@@ -2,26 +2,22 @@ class Methods extends ModuleBase {
     
     constructor(){
         super("Methods")
-        this.bases = {}
-        this.stores = {}
+        this.pool = {}
     }
 
     regster( name, method ){
-        if( this.bases[name] == null ){
-            this.bases[name] = method
-            this.stores[name] = {};
+        if( this.pool[name] == null ){
+            this.pool[name] = method
         } else {
             this.systemError('regster', 'Method name already exists.', name)
         }
     }
 
     use(name){
-        if( this.bases[name] ){
-            let action = this.bases[name](this.stores[name]);
-            return {
-                store : this.stores[name],
-                action : action
-            }
+        if( this.pool[name] ){
+            let store = {}
+            let action = this.pool[name](store);
+            return { store, action }
         } else {
             this.systemError('use', 'Method not found.', name)
         }
