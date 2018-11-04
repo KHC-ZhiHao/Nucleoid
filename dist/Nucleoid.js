@@ -30,8 +30,8 @@
          * @desc 於console呼叫錯誤，中斷程序並顯示錯誤的物件
          */
 
-        systemError(functionName, message, object) {
-            if (object) {
+        systemError(functionName, message, object = '$_no_error') {
+            if (object !== '$_no_error') {
                 console.log(`%c error object is : `, 'color:#FFF; background:red');
                 console.log(object);
             }
@@ -49,7 +49,10 @@
 
         regster(name, method) {
             if (this.pool[name] == null) {
-                this.pool[name] = method
+                this.pool[name] = {
+                    use: [],
+                    method: method
+                }
             } else {
                 this.systemError('regster', 'Method name already exists.', name)
             }
@@ -58,10 +61,35 @@
         use(name) {
             if (this.pool[name]) {
                 let store = {}
-                let action = this.pool[name](store);
-                return { store, action }
+                let action = this.pool[name].method(store, this.piece(name));
+                if (typeof action === 'function') {
+                    return { store, action }
+                } else {
+                    this.systemError('use', 'Action not a function.', action)
+                }
             } else {
                 this.systemError('use', 'Method not found.', name)
+            }
+        }
+
+        piece(poolName) {
+            return function (name) {
+                if (this.pool[poolName].use.includes(name) === false) {
+                    this.pool[poolName].use.push(name)
+                }
+                return this.use(name)
+            }.bind(this)
+        }
+
+        getMaps(name) {
+            let used = [];
+            let length = this.pool[name].use.length;
+            for (let i = 0; i < length; i++) {
+                used.push(this.getMaps(this.pool[name].use[i]))
+            }
+            return {
+                name: name,
+                used: used
             }
         }
 
@@ -79,15 +107,19 @@
         constructor(nucleoid, callback) {
             super("Transcription");
             this.name = "";
+            this.start = Date.now();
             this.stack = [];
             this.finish = false;
             this.runIndex = 0;
             this.callback = callback;
             this.nucleoid = nucleoid;
-            this.usedMethods = [];
             this.initTimeOut();
             this.initGenerator();
             this.validateNucleoid();
+        }
+
+        get now() {
+            return Date.now() - this.start;
         }
 
         /**
@@ -148,16 +180,23 @@
         }
 
         /**
-         * @function addStack(step)
+         * @function addStack(step,text)
          * @desc 加入一個堆棧追蹤
          * @param {string} step 堆棧名稱 
          */
 
-        addStack(step) {
-            this.stack.push({
+        addStack(step, text) {
+            let stack = {
                 step: step,
                 start: this.now,
-            })
+            }
+            if (text) {
+                stack.text = text
+            }
+            if (step === "queue") {
+                stack.used = [];
+            }
+            this.stack.push(stack)
         }
 
         /**
@@ -187,7 +226,7 @@
                             exit();
                         } else {
                             let next = self.next.bind(self);
-                            self.addStack('queue:' + self.nucleoid.genes[self.runIndex].name);
+                            self.addStack('queue', self.nucleoid.genes[self.runIndex].name);
                             self.nucleoid.genes[self.runIndex].action(self.nucleoid.messenger, () => {
                                 if (next) {
                                     next();
@@ -213,16 +252,12 @@
          */
 
         initTimeOut() {
-            this.now = 0;
             this.timeout = null;
             this.timeoutEvent = () => {
                 this.addStack('timeout');
                 this.nucleoid.timeoutError(this.nucleoid.messenger);
                 this.exit();
             }
-            this.interval = setInterval(() => {
-                this.now += 1
-            }, 1)
         }
 
         /**
@@ -232,9 +267,7 @@
 
         getMethods(name) {
             if (this.nucleoid.methods[name]) {
-                if (this.usedMethods.includes(name) === false) {
-                    this.usedMethods.push(name)
-                }
+                this.stack.slice(-1)[0].used.push(MethodBucket.getMaps(name))
                 return this.nucleoid.methods[name]
             } else {
                 this.systemError('getMethods', `Methods(${name}) not found`)
@@ -266,10 +299,10 @@
             return {
                 name: this.name,
                 mode: this.getMode(),
-                step: this.stack.slice(-1)[0].step.split(":")[0],
+                step: this.stack.slice(-1)[0].step,
                 stack: this.stack,
-                useMethods: Object.keys(this.nucleoid.methods),
-                usedMethods: this.usedMethods
+                totalRunTime: this.now,
+                useMethods: Object.keys(this.nucleoid.methods)
             }
         }
 
@@ -290,7 +323,6 @@
                     clearTimeout(this.timeout);
                     this.timeout = null;
                 }
-                clearInterval(this.interval);
                 let status = this.createStatus();
                 if (this.nucleoid.terminator) {
                     this.nucleoid.terminator(this.nucleoid.messenger, status);
@@ -323,7 +355,7 @@
                             if (this.nucleoid.trymodeError) {
                                 this.nucleoid.trymodeError(this.nucleoid.messenger, exception)
                             }
-                            this.addStack('catch: ' + exception);
+                            this.addStack('catch', exception);
                             this.exit();
                         }
                     } else {
@@ -342,6 +374,10 @@
 
     class Nucleoid extends ModuleBase {
 
+        /**
+         * @member {object} _private 保護變數，他不會被外部的變數給覆蓋到
+         */
+
         constructor() {
             super("Nucleoid");
             this.genes = [];
@@ -354,6 +390,7 @@
             this.terminator = null;
             this.messenger = {};
             this.methods = {};
+            this._protection = {};
             this.setName('No name');
         }
 
@@ -418,7 +455,19 @@
 
         addMessenger(key, value, force = false) {
             if (this.messenger[key] == null || force === true) {
-                this.messenger[key] = value
+                if (key.slice(0, 1) === "$") {
+                    this._protection[key] = value
+                    Object.defineProperty(this.messenger, key, {
+                        set: () => {
+                            this.systemError('addMessenger', "This key is a private key, can't be change.", key)
+                        },
+                        get: () => {
+                            return this._protection[key];
+                        },
+                    })
+                } else {
+                    this.messenger[key] = value
+                }
             } else {
                 this.systemError('addMessenger', 'Messenger key already exists.', key);
             }

@@ -8,15 +8,19 @@ class Transcription extends ModuleBase {
     constructor( nucleoid, callback ){
         super("Transcription");
         this.name = "";
+        this.start = Date.now();
         this.stack = [];
         this.finish = false;
         this.runIndex = 0;
         this.callback = callback;
         this.nucleoid = nucleoid;
-        this.usedMethods = [];
         this.initTimeOut();
         this.initGenerator();
         this.validateNucleoid();
+    }
+
+    get now(){
+        return Date.now() - this.start;
     }
 
     /**
@@ -77,16 +81,23 @@ class Transcription extends ModuleBase {
     }
 
     /**
-     * @function addStack(step)
+     * @function addStack(step,text)
      * @desc 加入一個堆棧追蹤
      * @param {string} step 堆棧名稱 
      */
 
-    addStack(step){
-        this.stack.push({
+    addStack( step, text ){
+        let stack = {
             step : step,
             start : this.now,
-        })
+        }
+        if( text ){
+            stack.text = text
+        }
+        if( step === "queue" ){
+            stack.used = [];
+        }
+        this.stack.push(stack)
     }
 
     /**
@@ -116,7 +127,7 @@ class Transcription extends ModuleBase {
                         exit();
                     } else {
                         let next = self.next.bind(self);
-                        self.addStack( 'queue:' + self.nucleoid.genes[self.runIndex].name );
+                        self.addStack( 'queue', self.nucleoid.genes[self.runIndex].name );
                         self.nucleoid.genes[self.runIndex].action( self.nucleoid.messenger, ()=>{
                             if( next ){ 
                                 next();
@@ -142,16 +153,12 @@ class Transcription extends ModuleBase {
      */
 
     initTimeOut(){
-        this.now = 0;
         this.timeout = null;
         this.timeoutEvent = ()=>{
             this.addStack('timeout');
             this.nucleoid.timeoutError(this.nucleoid.messenger);
             this.exit();
         }
-        this.interval = setInterval(()=>{
-            this.now += 1
-        }, 1)
     }
 
     /**
@@ -161,9 +168,7 @@ class Transcription extends ModuleBase {
 
     getMethods(name){
         if( this.nucleoid.methods[name] ){
-            if( this.usedMethods.includes(name) === false ){
-                this.usedMethods.push(name)
-            }
+            this.stack.slice(-1)[0].used.push(MethodBucket.getMaps(name))
             return this.nucleoid.methods[name]
         } else {
             this.systemError('getMethods', `Methods(${name}) not found`)
@@ -195,10 +200,10 @@ class Transcription extends ModuleBase {
         return {
             name : this.name,
             mode : this.getMode(),
-            step : this.stack.slice(-1)[0].step.split(":")[0],
+            step : this.stack.slice(-1)[0].step,
             stack : this.stack,
-            useMethods : Object.keys(this.nucleoid.methods),
-            usedMethods : this.usedMethods
+            totalRunTime : this.now,
+            useMethods : Object.keys(this.nucleoid.methods)
         }
     }
 
@@ -219,7 +224,6 @@ class Transcription extends ModuleBase {
                 clearTimeout(this.timeout);
                 this.timeout = null;
             }
-            clearInterval(this.interval);
             let status = this.createStatus();
             if( this.nucleoid.terminator ){
                 this.nucleoid.terminator(this.nucleoid.messenger, status);
@@ -252,7 +256,7 @@ class Transcription extends ModuleBase {
                         if( this.nucleoid.trymodeError ){
                             this.nucleoid.trymodeError( this.nucleoid.messenger, exception )
                         }
-                        this.addStack('catch: ' + exception);
+                        this.addStack('catch', exception);
                         this.exit();
                     }
                 } else {

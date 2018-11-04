@@ -5,6 +5,10 @@
 
 class Nucleoid extends ModuleBase {
 
+    /**
+     * @member {object} _private 保護變數，他不會被外部的變數給覆蓋到
+     */
+
     constructor(){
         super("Nucleoid");
         this.genes = [];
@@ -17,6 +21,7 @@ class Nucleoid extends ModuleBase {
         this.terminator = null;
         this.messenger = {};
         this.methods = {};
+        this._protection = {};
         this.setName('No name');
     }
 
@@ -81,7 +86,19 @@ class Nucleoid extends ModuleBase {
 
     addMessenger( key, value, force = false ){
         if( this.messenger[key] == null || force === true ){
-            this.messenger[key] = value
+            if( key.slice(0, 1) === "$" ){
+                this._protection[key] = value
+                Object.defineProperty( this.messenger, key, {
+                    set: ()=>{
+                        this.systemError('addMessenger', "This key is a private key, can't be change.", key )
+                    },
+                    get: ()=>{
+                        return this._protection[key];
+                    },
+                })
+            } else {
+                this.messenger[key] = value
+            }
         } else {
             this.systemError('addMessenger', 'Messenger key already exists.', key );
         }

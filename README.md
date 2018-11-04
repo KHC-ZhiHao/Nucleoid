@@ -48,9 +48,33 @@ Nucleoid.regsterMethod('helloWorld', (store) => {
         return 'world!';
     }
 })
+```
 
-//hasMethod prevent of the nodejs require() cache.
+判定有無Method來防止require()快取錯誤
+
+HasMethod prevent of the nodejs require() cache.
+
+```js
 Nucleoid.hasMethod('helloWorld') //return true
+```
+
+可以互相引用強化code的復用性
+
+Reciprocity of enhanced code can be referenced to each other
+
+```js
+Nucleoid.regsterMethod('hello', (store) => {
+    return function(){
+        return 'hello ';
+    }
+})
+
+Nucleoid.regsterMethod('hello_world', (store, piece) => {
+    let hello = piece('hello').action();
+    return function(){
+        return hello + 'world!';
+    }
+})
 ```
 
 #### Set Name And Use Method
@@ -74,9 +98,24 @@ Add Messenger, it carrying the objects you need in the process. And thrown after
 ```js
 //devMessage is private message.
 nuc.addMessenger('body', '');
-nuc.addMessenger('statusCode', null);
 nuc.addMessenger('queryParam', Math.round(Math.random()));
+nuc.addMessenger('statusCode', null);
 nuc.addMessenger('devMessage', null);
+```
+
+保護模式，當使用$字號作為變數命名時，將其變數保護不可變
+
+Protected mode, when the name is used '$' as a variable, the variable protection is immutable.
+
+```js
+//devMessage is private message.
+nuc.addMessenger('$test', 1);
+
+//example
+nuc.queue('example', (messenger, next)=>{
+    messenger.$test = 2
+    //throw error 'This key is a private key, can't be change.'.
+})
 ```
 
 #### Promoter
@@ -211,6 +250,7 @@ Transcription output data :
     "status": {
         "name": "demo",
         "step": "finish",
+        "totalRunTime": 1002,
         "mode": [
             "try-catch-mode",
             "timeout"
@@ -221,30 +261,34 @@ Transcription output data :
                 "start": 0
             },
             {
-                "step": "queue:add_count",
-                "start": 0
+                "step": "queue",
+                "start": 0,
+                "text": "add_count",
+                "used": [{
+                    "name": "helloWorld",
+                    "used": []
+                }]
             },
             {
                 "step": "mediator",
                 "start": 0
             },
             {
-                "step": "queue:add_count_for_query",
-                "start": 1
+                "step": "queue",
+                "start": 1,
+                "text": "add_count_for_query",
+                "used": []
             },
             {
                 "step": "mediator",
-                "start": 246
+                "start": 1001
             },
             {
                 "step": "finish",
-                "start": 247
+                "start": 1002
             }
         ],
         "useMethods": [
-            "helloWorld"
-        ],
-        "usedMethods": [
             "helloWorld"
         ]
     },

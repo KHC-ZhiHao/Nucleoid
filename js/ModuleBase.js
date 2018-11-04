@@ -14,8 +14,8 @@ class ModuleBase {
      * @desc 於console呼叫錯誤，中斷程序並顯示錯誤的物件
      */
 
-    systemError( functionName, message, object ){
-        if( object ){
+    systemError( functionName, message, object = '$_no_error' ){
+        if( object !== '$_no_error' ){
             console.log( `%c error object is : `, 'color:#FFF; background:red' );
             console.log( object );
         }
