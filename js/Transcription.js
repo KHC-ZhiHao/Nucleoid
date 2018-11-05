@@ -81,18 +81,18 @@ class Transcription extends ModuleBase {
     }
 
     /**
-     * @function addStack(step,text)
+     * @function addStack(step,desc)
      * @desc 加入一個堆棧追蹤
      * @param {string} step 堆棧名稱 
      */
 
-    addStack( step, text ){
+    addStack( step, desc ){
         let stack = {
             step : step,
             start : this.now,
         }
-        if( text ){
-            stack.text = text
+        if( desc ){
+            stack.desc = desc
         }
         if( step === "queue" ){
             stack.used = [];
@@ -207,11 +207,6 @@ class Transcription extends ModuleBase {
         }
     }
 
-    //=============================
-    //
-    // api
-    //
-
     /**
      * @function exit()
      * @desc 跳出貯列
@@ -244,14 +239,14 @@ class Transcription extends ModuleBase {
 
     next(){
         if( this.finish === false ){
-            if( this.nucleoid.mediator ){
-                this.addStack('mediator');
-                this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
-            }
             setTimeout(()=>{
                 if( this.nucleoid.trymode ){
                     try{
                         this.runtime.next();
+                        if( this.nucleoid.mediator && this.finish === false ){
+                            this.addStack('mediator');
+                            this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
+                        }
                     } catch (exception) {
                         if( this.nucleoid.trymodeError ){
                             this.nucleoid.trymodeError( this.nucleoid.messenger, exception )
@@ -261,6 +256,10 @@ class Transcription extends ModuleBase {
                     }
                 } else {
                     this.runtime.next();
+                    if( this.nucleoid.mediator && this.finish === false ){
+                        this.addStack('mediator');
+                        this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
+                    }
                 }
             }, 1)
         }

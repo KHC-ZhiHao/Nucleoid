@@ -263,7 +263,7 @@ Transcription output data :
             {
                 "step": "queue",
                 "start": 0,
-                "text": "add_count",
+                "desc": "add_count",
                 "used": [{
                     "name": "helloWorld",
                     "used": []
@@ -276,7 +276,7 @@ Transcription output data :
             {
                 "step": "queue",
                 "start": 1,
-                "text": "add_count_for_query",
+                "desc": "add_count_for_query",
                 "used": []
             },
             {

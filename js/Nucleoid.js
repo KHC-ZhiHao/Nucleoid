@@ -6,7 +6,7 @@
 class Nucleoid extends ModuleBase {
 
     /**
-     * @member {object} _private 保護變數，他不會被外部的變數給覆蓋到
+     * @member {object} _protection 保護變數，他不會被外部的變數給覆蓋到
      */
 
     constructor(){
@@ -90,7 +90,7 @@ class Nucleoid extends ModuleBase {
                 this._protection[key] = value
                 Object.defineProperty( this.messenger, key, {
                     set: ()=>{
-                        this.systemError('addMessenger', "This key is a private key, can't be change.", key )
+                        this.systemError('addMessenger', "This key is a private key, can't be change.", key );
                     },
                     get: ()=>{
                         return this._protection[key];
