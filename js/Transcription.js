@@ -31,7 +31,7 @@ class Transcription extends ModuleBase {
     validateNucleoid(){
         if( this.validate() ){
             this.name = this.nucleoid.name;
-            this.next();
+            this.runtime.next();
         }
     }
 
@@ -239,14 +239,14 @@ class Transcription extends ModuleBase {
 
     next(){
         if( this.finish === false ){
+            if( this.nucleoid.mediator ){
+                this.addStack('mediator');
+                this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
+            }
             setTimeout(()=>{
                 if( this.nucleoid.trymode ){
                     try{
                         this.runtime.next();
-                        if( this.nucleoid.mediator && this.finish === false ){
-                            this.addStack('mediator');
-                            this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
-                        }
                     } catch (exception) {
                         if( this.nucleoid.trymodeError ){
                             this.nucleoid.trymodeError( this.nucleoid.messenger, exception )
@@ -256,10 +256,6 @@ class Transcription extends ModuleBase {
                     }
                 } else {
                     this.runtime.next();
-                    if( this.nucleoid.mediator && this.finish === false ){
-                        this.addStack('mediator');
-                        this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
-                    }
                 }
             }, 1)
         }
