@@ -1,6 +1,6 @@
 {
   "name": "nucleoid",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "description": "Nucleoid is a Promise based process control system.",
   "main": "./dist/Nucleoid.js",
   "scripts": {
