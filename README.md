@@ -22,6 +22,10 @@ The absence of a server has increased the commonality of components, so the clas
 
 Nucleoid is a Promise based process control system. The original purpose is to process the cloud functions, So there will be some unreasonable strict judgments, But Nucleoid does not limit the operating environment and direction of use.
 
+### 支援環境(support)
+
+Nodejs 8+ or support ES6 browser
+
 ### 安裝(install)
 
 ```bash
@@ -195,6 +199,39 @@ nuc.setTrymode( true, (messenger, exception)=>{
 })
 ```
 
+#### uncaught-exception-mode (v1.1.6)
+
+未捕捉模式，能獲取非同步宣告造成的錯誤
+
+>本模式在Browser端使用window.addEventListener('error')處理
+
+>本模式在Node端使用domain module處理
+
+>Node 不支援 Promise, async/await
+
+Can get errors caused by non-synchronized announcements
+
+>This mode is handled on the Browser side using window.addEventListener('error')
+
+>This mode is processed by the domain module on the Node side.
+
+>Node does not support Promise, async/await
+
+```js
+nuc.setUncaughtException(true, (messenger, error)=>{
+    messenger.body = error.message;
+    messenger.statusCode = 500;
+})
+
+nuc.queue( 'async next', function(messenger, next, methods){
+    setTimeout(()=>{
+        let a= 5
+        a() // error
+        next()
+    }, 100)
+})
+```
+
 #### Queue
 
 建立流程貯列，在呼叫運行時依序運行。
@@ -302,11 +339,40 @@ Transcription output data :
 }
 ```
 
-### 注意(warning)
+### 關於Promise, async/await(about Promise async/await)
 
-只適用於ES6以上的版本
+try-catch-mode 和 uncaught-exception-mode 都是基於開發模式時所使用的，當你的開發過程中使用Promise, async/await時請保持良好的程式編寫，Nucleoid並不會抓取任何錯誤。
 
-Only support ES6 version and up .
+Try-catch-mode and uncaught-exception-mode are based on the development mode. When you use Promise during development, async / await please keep a good program, Nucleoid will not grab any errors.
+
+```js
+nuc.addMessenger('res', '')
+nuc.setUncaughtException( development ? true : false, (messenger, error)=>{
+    messenger.res = 'bad'
+})
+nuc.setTrymode( development ? true : false, (messenger, exception)=>{
+    messenger.res = 'bad'
+})
+
+let foo = function () {
+    return new Promise((resolve, reject)=>{
+        if (Math.round(Math.random()) === 1) {
+            resolve('lucky')
+        }else{
+            reject('bad!!!!')
+        }
+    })
+}
+
+nuc.queue( 'async', async (messenger, next)=>{
+    try{
+        messenger.res = await foo()
+    } catch(error){
+        messenger.res = error
+    }
+    next()
+})
+```
 
 [npm-image]: https://img.shields.io/npm/v/nucleoid.svg
 [npm-url]: https://npmjs.org/package/nucleoid
