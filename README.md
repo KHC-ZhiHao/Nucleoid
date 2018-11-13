@@ -81,6 +81,44 @@ Nucleoid.regsterMethod('hello_world', (store, piece) => {
 })
 ```
 
+#### Method Groups (v1.1.7)
+
+Method Groups 是模塊化 Methods 的方法，你可以使用 node package 的模式去協助管控頂層的 Methods。
+
+> 使用 template 作為接口，用eat引入Nucleoid中
+
+```js
+
+let each = {
+    template(regster){
+        regster('each', (store, piece)=>{
+            return function(array, callback){
+                for( let i = 0; i < array.length; i++ ){
+                    callback(array[i])
+                }
+            }
+        })
+        regster('doubleEach', (store, piece)=>{
+            let each = piece('each').action
+            return function(array, callback){
+                each(array, callback)
+                each(array, callback)
+            }
+        })
+    }
+}
+
+Nucleoid.eat('demo', each)
+
+let nuc = new Nucleoid()
+
+nuc.queue('groups', (meg, next, methods)=>{
+    methods('demo-doubleEach').action([1,2], (num)=>{
+        console.log(num) // 1,2,1,2
+    })
+})
+```
+
 #### Set Name And Use Method
 
 建立與設定名稱，並引用Method
@@ -203,19 +241,11 @@ nuc.setTrymode( true, (messenger, exception)=>{
 
 未捕捉模式，能獲取非同步宣告造成的錯誤
 
->本模式在Browser端使用window.addEventListener('error')處理
-
->本模式在Node端使用domain module處理
-
->Node 不支援 Promise, async/await
+>不支援 Promise, async/await catch
 
 Can get errors caused by non-synchronized announcements
 
->This mode is handled on the Browser side using window.addEventListener('error')
-
->This mode is processed by the domain module on the Node side.
-
->Node does not support Promise, async/await
+>Does not support Promise, async/await catch
 
 ```js
 nuc.setUncaughtException(true, (messenger, error)=>{
