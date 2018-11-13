@@ -11,14 +11,20 @@ class Transcription extends ModuleBase {
         this.start = Date.now();
         this.stack = [];
         this.finish = false;
+        this.operating = typeof window === 'undefined' ? 'node' : 'browser';
         this.runIndex = 0;
         this.callback = callback;
         this.nucleoid = nucleoid;
         this.bindGetMaps = MethodBucket.getMaps.bind(MethodBucket)
         this.initTimeOut();
         this.initGenerator();
+        this.initUncaughtException();
         this.validateNucleoid();
     }
+
+    /**
+     * @member {numbre} 當前時間
+     */
 
     get now(){
         return Date.now() - this.start;
@@ -53,6 +59,7 @@ class Transcription extends ModuleBase {
             mediator : [false, 'function'],
             methods : [false, 'object'],
             terminator : [false, 'function'],
+            uncaughtExceptionError: [false, 'function']
         }
         //cycle
         for( let key in template ){
@@ -149,6 +156,28 @@ class Transcription extends ModuleBase {
     }
 
     /**
+     * @function initUncaughtException
+     * @desc 初始化捕捉異步錯誤
+     */
+
+    initUncaughtException(){
+        if( this.nucleoid.uncaughtExceptionError != null ){
+            let error = (error) => {
+                this.addStack('uncaught exception', error.message);
+                this.nucleoid.uncaughtExceptionError( this.nucleoid.messenger, error )
+                this.exit()
+            }
+            this.uncaughtExceptionError = error.bind(this)
+            if( this.operating === 'node' ){
+                this.uncaughtExceptionDomain = require('domain').create();
+                this.uncaughtExceptionDomain.on('error', this.uncaughtExceptionError);
+            }else{
+                window.addEventListener('error', this.uncaughtExceptionError);
+            }
+        }
+    }
+
+    /**
      * @function initTimeOut()
      * @desc 初始化Timeout事件與now時間追蹤
      */
@@ -189,6 +218,9 @@ class Transcription extends ModuleBase {
         if( this.nucleoid.timeoutError ){
             mode.push('timeout');
         }
+        if( this.nucleoid.uncaughtExceptionError ){
+            mode.push('uncaught-exception-mode')
+        }
         return mode
     }
 
@@ -219,6 +251,9 @@ class Transcription extends ModuleBase {
             if( this.timeout ){
                 clearTimeout(this.timeout);
                 this.timeout = null;
+            }
+            if( this.nucleoid.uncaughtExceptionError != null && this.operating !== 'node' ){
+                window.removeEventListener('error', this.uncaughtExceptionError)
             }
             let status = this.createStatus();
             if( this.nucleoid.terminator ){
@@ -251,16 +286,30 @@ class Transcription extends ModuleBase {
     }
 
     doNext(){
+        this.actionTryMode()
+    }
+
+    actionTryMode(){
         if( this.nucleoid.trymode ){
             try{
-                this.runtime.next();
+                this.actionUncaughtException();
             } catch (exception) {
                 if( this.nucleoid.trymodeError ){
                     this.nucleoid.trymodeError( this.nucleoid.messenger, exception )
                 }
-                this.addStack('catch', exception);
+                this.addStack('catch', exception.message);
                 this.exit();
             }
+        } else {
+            this.actionUncaughtException();
+        }
+    }
+
+    actionUncaughtException(){
+        if( this.nucleoid.uncaughtExceptionError && this.operating === "node" ){
+            this.uncaughtExceptionDomain.run(() => {
+                this.runtime.next();
+            });
         } else {
             this.runtime.next();
         }

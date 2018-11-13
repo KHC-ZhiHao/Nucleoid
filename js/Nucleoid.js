@@ -21,6 +21,7 @@ class Nucleoid extends ModuleBase {
         this.terminator = null;
         this.messenger = {};
         this.methods = {};
+        this.uncaughtExceptionError = null;
         this._protection = {};
         this.setName('No name');
     }
@@ -189,6 +190,27 @@ class Nucleoid extends ModuleBase {
             }
         }else{
             this.systemError('setTerminator', 'Terminator not a function.', terminator );
+        }
+    }
+
+    /**
+     * @function setUncaughtException(open,uncaughtException)
+     * @desc 設定未捕獲模式
+     */
+
+    setUncaughtException( open, uncaughtException ){
+        if( open === false ){
+            this.uncaughtExceptionError = null
+            return;
+        }
+        if( typeof uncaughtException === "function" ){
+            if( this.uncaughtExceptionError == null ){
+                this.uncaughtExceptionError = uncaughtException;
+            } else {
+                this.systemError('setUncaughtException', 'Uncaught Exception already exists.', this.uncaughtExceptionError );
+            }
+        }else{
+            this.systemError('setUncaughtException', 'Not a function.', uncaughtException );
         }
     }
 
