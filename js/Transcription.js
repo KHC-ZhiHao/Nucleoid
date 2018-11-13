@@ -14,6 +14,7 @@ class Transcription extends ModuleBase {
         this.runIndex = 0;
         this.callback = callback;
         this.nucleoid = nucleoid;
+        this.bindGetMaps = MethodBucket.getMaps.bind(MethodBucket)
         this.initTimeOut();
         this.initGenerator();
         this.validateNucleoid();
@@ -168,7 +169,7 @@ class Transcription extends ModuleBase {
 
     getMethods(name){
         if( this.nucleoid.methods[name] ){
-            this.stack.slice(-1)[0].used.push(MethodBucket.getMaps(name))
+            this.stack.slice(-1)[0].used.push(this.bindGetMaps(name))
             return this.nucleoid.methods[name]
         } else {
             this.systemError('getMethods', `Methods(${name}) not found`)

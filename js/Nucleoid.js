@@ -25,12 +25,16 @@ class Nucleoid extends ModuleBase {
         this.setName('No name');
     }
 
-    static regsterMethod( name, method ) {
-        if( typeof method === "function" && typeof name === "string" ){
-            MethodBucket.regster(name, method);
+    static eat( groupName, { template } ) {
+        if( template ){
+            MethodBucket.regsterGroup( groupName, template );
         } else {
-            this.systemError('regster', 'Params type error, try regsterMethod(string, function).', name)
+            this.systemError('eat', 'Template not found.')
         }
+    }
+
+    static regsterMethod( name, method ) {
+        MethodBucket.regster(name, method);
     }
 
     static hasMethod(name){
