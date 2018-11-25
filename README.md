@@ -2,6 +2,10 @@
 
 [![NPM Version][npm-image]][npm-url]
 
+<font color="red">警告，以下訊息為1.7版，1.8版後將會重新改變結構並實驗至完整版本後再公開</font>
+
+<font color="red">Warning, the following message is version 1.7. After version 1.8, the structure will be changed again and will be published after the experiment is completed.</font>
+
 ### 簡介(overview)
 
 #### 中文:

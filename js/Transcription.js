@@ -5,21 +5,101 @@
 
 class Transcription extends ModuleBase {
 
-    constructor( nucleoid, callback ){
+    constructor( nucleoid, callback, reject ){
         super("Transcription");
         this.name = "";
+        this.used = [];
         this.start = Date.now();
         this.stack = [];
+        this.fail = null;
         this.finish = false;
+        this.reject = reject;
         this.operating = typeof window === 'undefined' ? 'node' : 'browser';
         this.runIndex = 0;
         this.callback = callback;
         this.nucleoid = nucleoid;
-        this.bindGetMaps = MethodBucket.getMaps.bind(MethodBucket)
+        this.targetStack = null;
         this.initTimeOut();
         this.initGenerator();
         this.initUncaughtException();
         this.validateNucleoid();
+    }
+
+    getSystem() {
+        return {
+            fail: this.callFail.bind(this),
+            mixin: this.mixin.bind(this),
+            methods: this.methods.bind(this),
+            template: this.template.bind(this)
+        }
+    }
+
+    template({thread, error, finish}) {
+        let over = 0;
+        let stop = false;
+        let uning = 0;
+        let threadList = [];
+        let onload = function() {
+            over += 1;
+            if( over === uning && stop === false ){
+                finish();
+            }
+        }
+        let reject = function(e) {
+            if( stop === false ){
+                stop = true
+                error(e);
+            }
+        }
+        let regster = async function(action){
+            uning += 1;
+            threadList.push(action);
+        }
+        thread(regster);
+        for( let i = 0; i < threadList.length; i++ ){
+            threadList[i](onload, reject);
+        }
+        if( threadList.length === 0 ){
+            finish();
+        }
+    }
+    
+    /**
+     * @function method()
+     * @desc 獲取使用的模塊
+     */
+
+    methods(name){
+        let method = MethodBucket.getMethod(name).use();
+        this.addStackExtra('used', {
+            name : name,
+            used : MethodBucket.getMethod(name).used
+        }, 'list');
+        return method;
+    }
+
+    mixin(nucleoid, callback) {
+        if (nucleoid instanceof Nucleoid) {
+            nucleoid.transcription().then((result)=>{
+                this.addStackExtra('mixin', {
+                    status: result.status
+                });
+                callback(null, result.messenger)
+            }, (error) => {
+                callback(error, null)
+            })
+        } else {
+            this.systemError('mixin', `Target not a nucleoid module.`, nucleoid)
+        }
+    }
+
+    callFail(error) {
+        this.fail = true
+        this.reject({
+            error,
+            messenger: this.nucleoid.messenger,
+            status: this.createStatus()
+        })
     }
 
     /**
@@ -50,16 +130,16 @@ class Transcription extends ModuleBase {
     validate(){
         let template = {
             name : [true, 'string'],
-            trymode : [true, 'boolean'],
-            trymodeError : [false, 'function'],
+            tryCatchMode : [true, 'boolean'],
+            tryCatchModeAction : [false, 'function'],
             timeout : [false, 'number'],
-            timeoutError : [false, 'function'],
+            timeoutAction : [false, 'function'],
             promoter : [false, 'function'],
             messenger : [true, 'object'],
             mediator : [false, 'function'],
-            methods : [false, 'object'],
             terminator : [false, 'function'],
-            uncaughtExceptionError: [false, 'function']
+            uncaughtException: [true, 'boolean'],
+            uncaughtExceptionAction: [false, 'function']
         }
         //cycle
         for( let key in template ){
@@ -74,14 +154,14 @@ class Transcription extends ModuleBase {
             }
         }
         //gene
-        if( Array.isArray(this.nucleoid.genes) === false ){
-            this.systemError( 'validateNucleoid', `Data type must array.`, this.nucleoid.genes );
+        if( Array.isArray(this.nucleoid.queues) === false ){
+            this.systemError( 'validateNucleoid', `Data type must array.`, this.nucleoid.queues );
             return false;
         }
-        for( let i = 0; i < this.nucleoid.genes.length; i++ ){
-            let target = this.nucleoid.genes[i]
+        for( let i = 0; i < this.nucleoid.queues.length; i++ ){
+            let target = this.nucleoid.queues[i]
             if( typeof target.name !== "string" || typeof target.action !== "function" ){
-                this.systemError( 'validateNucleoid', `Genes type Incorrect.`, target );
+                this.systemError( 'validateNucleoid', `Queues type Incorrect.`, target );
                 return false;
             }
         }
@@ -102,10 +182,21 @@ class Transcription extends ModuleBase {
         if( desc ){
             stack.desc = desc
         }
-        if( step === "queue" ){
-            stack.used = [];
-        }
         this.stack.push(stack)
+        return stack
+    }
+
+    addStackExtra( name, extra, mode ){
+        if( this.targetStack ){
+            if( mode === "list" ){
+                if( this.targetStack[name] == null ){
+                    this.targetStack[name] = [];
+                }
+                this.targetStack[name].push(extra);
+            } else {
+                this.targetStack[name] = extra;
+            }
+        }
     }
 
     /**
@@ -117,7 +208,6 @@ class Transcription extends ModuleBase {
         let max = 10000;
         let self = this;
         let exit = this.exit.bind(this);
-        let getMethods = this.getMethods.bind(this)
         let generator = function * (){
             if( self.nucleoid.timeoutError && self.nucleoid.timeout ){
                 self.timeout = setTimeout( self.timeoutEvent, self.nucleoid.timeout )
@@ -130,20 +220,20 @@ class Transcription extends ModuleBase {
                 if( self.finish ){
                     break;
                 } else {
-                    if( self.nucleoid.genes[self.runIndex] == null ){
+                    if( self.nucleoid.queues[self.runIndex] == null ){
                         self.addStack('finish');
                         exit();
                     } else {
                         let next = self.next.bind(self);
-                        self.addStack( 'queue', self.nucleoid.genes[self.runIndex].name );
-                        self.nucleoid.genes[self.runIndex].action( self.nucleoid.messenger, ()=>{
+                        self.targetStack = self.addStack( 'queue', self.nucleoid.queues[self.runIndex].name );
+                        self.nucleoid.queues[self.runIndex].action( self.nucleoid.messenger, self.getSystem(), ()=>{
                             if( next ){ 
                                 next();
                                 next = null;
                             } else {
                                 console.warn(`Nucleoid(${self.nucleoid.name}) => Next already called.`)
                             }
-                        }, getMethods)
+                        })
                         self.runIndex += 1;
                     }
                 }
@@ -193,33 +283,22 @@ class Transcription extends ModuleBase {
 
     /**
      * @function getMethods()
-     * @desc 獲取使用的模塊
-     */
-
-    getMethods(name){
-        if( this.nucleoid.methods[name] ){
-            this.stack.slice(-1)[0].used.push(this.bindGetMaps(name))
-            return this.nucleoid.methods[name]
-        } else {
-            this.systemError('getMethods', `Methods(${name}) not found`)
-        }
-    }
-
-    /**
-     * @function getMethods()
      * @desc 獲取模式
      */
 
     getMode(){
         let mode = [];
-        if( this.nucleoid.trymode ){
+        if( this.nucleoid.tryCatchMode ){
             mode.push('try-catch-mode');
         }
-        if( this.nucleoid.timeoutError ){
+        if( this.nucleoid.timeoutAction ){
             mode.push('timeout');
         }
-        if( this.nucleoid.uncaughtExceptionError ){
-            mode.push('uncaught-exception-mode')
+        if( this.nucleoid.uncaughtException ){
+            mode.push('uncaught-exception-mode');
+        }
+        if( this.fail ){
+            mode.push('fail');
         }
         return mode
     }
@@ -235,8 +314,7 @@ class Transcription extends ModuleBase {
             mode : this.getMode(),
             step : this.stack.slice(-1)[0].step,
             stack : this.stack,
-            totalRunTime : this.now,
-            useMethods : Object.keys(this.nucleoid.methods)
+            totalRunTime : this.now
         }
     }
 
@@ -252,8 +330,8 @@ class Transcription extends ModuleBase {
                 clearTimeout(this.timeout);
                 this.timeout = null;
             }
-            if( this.nucleoid.uncaughtExceptionError != null && this.operating !== 'node' ){
-                window.removeEventListener('error', this.uncaughtExceptionError)
+            if( this.nucleoid.uncaughtException && this.operating !== 'node' ){
+                window.removeEventListener('error', this.uncaughtExceptionAction)
             }
             let status = this.createStatus();
             if( this.nucleoid.terminator ){
@@ -286,16 +364,16 @@ class Transcription extends ModuleBase {
     }
 
     doNext(){
-        this.actionTryMode()
+        this.actionTryCatchMode()
     }
 
-    actionTryMode(){
-        if( this.nucleoid.trymode ){
+    actionTryCatchMode(){
+        if( this.nucleoid.tryCatchMode ){
             try{
                 this.actionUncaughtException();
             } catch (exception) {
-                if( this.nucleoid.trymodeError ){
-                    this.nucleoid.trymodeError( this.nucleoid.messenger, exception )
+                if( this.nucleoid.tryCatchModeAction ){
+                    this.nucleoid.tryCatchModeAction( this.nucleoid.messenger, exception )
                 }
                 this.addStack('catch', exception.message);
                 this.exit();
@@ -306,7 +384,7 @@ class Transcription extends ModuleBase {
     }
 
     actionUncaughtException(){
-        if( this.nucleoid.uncaughtExceptionError && this.operating === "node" ){
+        if( this.nucleoid.uncaughtException && this.operating === "node" ){
             this.uncaughtExceptionDomain.run(() => {
                 this.runtime.next();
             });

@@ -11,35 +11,43 @@ class Nucleoid extends ModuleBase {
 
     constructor(){
         super("Nucleoid");
-        this.genes = [];
-        this.trymode = false;
-        this.trymodeError = null;
+        this.queues = [];
+        this.tryCatchMode = false;
+        this.tryCatchModeAction = null;
         this.timeout = 3600;
-        this.timeoutError = null;
+        this.timeoutAction = null;
+        this.uncaughtException = false;
+        this.uncaughtExceptionAction = null;
         this.promoter = null;
         this.mediator = null;
         this.terminator = null;
         this.messenger = {};
-        this.methods = {};
-        this.uncaughtExceptionError = null;
         this._protection = {};
         this.setName('No name');
     }
 
-    static eat( groupName, { template } ) {
-        if( template ){
-            MethodBucket.regsterGroup( groupName, template );
-        } else {
-            this.systemError('eat', 'Template not found.')
-        }
+    static addGroup( groupName, group, options ) {
+        MethodBucket.addGroup( groupName, group, options );
     }
 
-    static regsterMethod( name, method ) {
-        MethodBucket.regster(name, method);
+    static addMethod(options) {
+        MethodBucket.addMethod(options)
     }
 
-    static hasMethod(name){
-        return !!MethodBucket.pool[name]
+    static hasMethod(name) {
+        MethodBucket.hasMethod(name)
+    }
+
+    static hasGroup(name) {
+        MethodBucket.hasGroup(name)
+    }
+
+    static callMethod(name) {
+        MethodBucket.getMethod(name).use()
+    }
+
+    static createMethodGroup(options) {
+        return new MethodGroup(options)
     }
 
     /**
@@ -63,23 +71,41 @@ class Nucleoid extends ModuleBase {
     setTimeout( timeout, error ){
         if( typeof timeout === "number" && typeof error === "function" ){
             this.timeout = timeout;
-            this.timeoutError = error;
+            this.timeoutAction = error;
         } else {
             this.systemError( 'setTimeout', 'Params type error. try setTimeout(number, function)' );
         }
     }
 
     /** 
-     * @function setTrymode(open,error)
+     * @function setTrymode(enable,error)
      * @desc 設定try-catch模式
      */
 
-    setTrymode( open, error ){
-        if( typeof open === "boolean" && ( typeof error === "function" || error == null ) ){
-            this.trymode = open;
-            this.trymodeError = error;
+    setTrymode( enable, error ){
+        if( typeof enable === "boolean" && ( typeof error === "function" || error == null ) ){
+            this.tryCatchMode = enable;
+            this.tryCatchModeAction = error;
         } else {
             this.systemError( 'setTrymode', 'Params type error, try setTrymode(boolean, function).' );
+        }
+    }
+
+    /**
+     * @function setUncaughtException(enable,uncaughtException)
+     * @desc 設定未捕獲模式
+     */
+
+    setUncaughtException( enable, uncaughtException ) {
+        if( typeof enable === "boolean" && typeof uncaughtException === "function" ){
+            if( this.uncaughtExceptionError == null ){
+                this.uncaughtException = enable
+                this.uncaughtExceptionAction = uncaughtException;
+            } else {
+                this.systemError('setUncaughtException', 'Uncaught Exception already exists.', this.uncaughtExceptionError );
+            }
+        }else{
+            this.systemError('setUncaughtException', 'Not a function.', uncaughtException );
         }
     }
 
@@ -110,27 +136,14 @@ class Nucleoid extends ModuleBase {
     }
 
     /**
-     * @function use(name)
-     * @desc 使用一個以註冊的方法
-     */
-
-    use(name){
-        if( this.methods[name] == null ){
-            this.methods[name] = MethodBucket.use(name)
-        } else {
-            this.systemError('use', 'Method already exists.', name );
-        }
-    }
-
-    /**
      * @function queue(name,action)
      * @desc 加入一個貯列
      */
 
-    queue( name, action ){
+    queue( name, action ) {
         if( typeof name === 'string' ){
             if( typeof action === 'function' ){
-                this.genes.push({
+                this.queues.push({
                     name : name,
                     action : action,
                 });
@@ -147,7 +160,7 @@ class Nucleoid extends ModuleBase {
      * @desc 設定啟動事件
      */
 
-    setPromoter(promoter){
+    setPromoter(promoter) {
         if( typeof promoter === 'function' ){
             if( this.promoter == null ){
                 this.promoter = promoter;
@@ -164,7 +177,7 @@ class Nucleoid extends ModuleBase {
      * @desc 設定中介事件
      */
 
-    setMediator(mediator){
+    setMediator(mediator) {
         if( typeof mediator === 'function' ){
             if( this.mediator == null ){
                 this.mediator = mediator;
@@ -181,7 +194,7 @@ class Nucleoid extends ModuleBase {
      * @desc 設定結束事件
      */
 
-    setTerminator(terminator){
+    setTerminator(terminator) {
         if( typeof terminator === 'function' ){
             if( this.terminator == null ){
                 this.terminator = terminator;
@@ -193,39 +206,18 @@ class Nucleoid extends ModuleBase {
         }
     }
 
-    /**
-     * @function setUncaughtException(open,uncaughtException)
-     * @desc 設定未捕獲模式
-     */
-
-    setUncaughtException( open, uncaughtException ){
-        if( open === false ){
-            this.uncaughtExceptionError = null
-            return;
-        }
-        if( typeof uncaughtException === "function" ){
-            if( this.uncaughtExceptionError == null ){
-                this.uncaughtExceptionError = uncaughtException;
-            } else {
-                this.systemError('setUncaughtException', 'Uncaught Exception already exists.', this.uncaughtExceptionError );
-            }
-        }else{
-            this.systemError('setUncaughtException', 'Not a function.', uncaughtException );
-        }
-    }
-
     /** 
      * @function transcription()
      * @desc 執行系統
      * @returns {Promise}
      */
 
-    transcription(){
+    transcription() {
         this.transcription = function(){
             console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
         }
-        return new Promise(( resolve )=>{
-            new Transcription( this, resolve )
+        return new Promise(( resolve, reject )=>{
+            new Transcription( this, resolve, reject )
         })
     }
 

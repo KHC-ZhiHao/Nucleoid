@@ -1,41 +1,888 @@
-var $jscomp=$jscomp||{};$jscomp.scope={};$jscomp.ASSUME_ES5=!1;$jscomp.ASSUME_NO_NATIVE_MAP=!1;$jscomp.ASSUME_NO_NATIVE_SET=!1;$jscomp.objectCreate=$jscomp.ASSUME_ES5||"function"==typeof Object.create?Object.create:function(a){var b=function(){};b.prototype=a;return new b};$jscomp.underscoreProtoCanBeSet=function(){var a={a:!0},b={};try{return b.__proto__=a,b.a}catch(c){}return!1};
-$jscomp.setPrototypeOf="function"==typeof Object.setPrototypeOf?Object.setPrototypeOf:$jscomp.underscoreProtoCanBeSet()?function(a,b){a.__proto__=b;if(a.__proto__!==b)throw new TypeError(a+" is not extensible");return a}:null;
-$jscomp.inherits=function(a,b){a.prototype=$jscomp.objectCreate(b.prototype);a.prototype.constructor=a;if($jscomp.setPrototypeOf){var c=$jscomp.setPrototypeOf;c(a,b)}else for(c in b)if("prototype"!=c)if(Object.defineProperties){var e=Object.getOwnPropertyDescriptor(b,c);e&&Object.defineProperty(a,c,e)}else a[c]=b[c];a.superClass_=b.prototype};$jscomp.getGlobal=function(a){return"undefined"!=typeof window&&window===a?a:"undefined"!=typeof global&&null!=global?global:a};$jscomp.global=$jscomp.getGlobal(this);
-$jscomp.arrayIteratorImpl=function(a){var b=0;return function(){return b<a.length?{done:!1,value:a[b++]}:{done:!0}}};$jscomp.arrayIterator=function(a){return{next:$jscomp.arrayIteratorImpl(a)}};$jscomp.defineProperty=$jscomp.ASSUME_ES5||"function"==typeof Object.defineProperties?Object.defineProperty:function(a,b,c){a!=Array.prototype&&a!=Object.prototype&&(a[b]=c.value)};$jscomp.SYMBOL_PREFIX="jscomp_symbol_";
-$jscomp.initSymbol=function(){$jscomp.initSymbol=function(){};$jscomp.global.Symbol||($jscomp.global.Symbol=$jscomp.Symbol)};$jscomp.Symbol=function(){var a=0;return function(b){return $jscomp.SYMBOL_PREFIX+(b||"")+a++}}();
-$jscomp.initSymbolIterator=function(){$jscomp.initSymbol();var a=$jscomp.global.Symbol.iterator;a||(a=$jscomp.global.Symbol.iterator=$jscomp.global.Symbol("iterator"));"function"!=typeof Array.prototype[a]&&$jscomp.defineProperty(Array.prototype,a,{configurable:!0,writable:!0,value:function(){return $jscomp.iteratorPrototype($jscomp.arrayIteratorImpl(this))}});$jscomp.initSymbolIterator=function(){}};
-$jscomp.initSymbolAsyncIterator=function(){$jscomp.initSymbol();var a=$jscomp.global.Symbol.asyncIterator;a||(a=$jscomp.global.Symbol.asyncIterator=$jscomp.global.Symbol("asyncIterator"));$jscomp.initSymbolAsyncIterator=function(){}};$jscomp.iteratorPrototype=function(a){$jscomp.initSymbolIterator();a={next:a};a[$jscomp.global.Symbol.iterator]=function(){return this};return a};
-$jscomp.makeIterator=function(a){var b="undefined"!=typeof Symbol&&Symbol.iterator&&a[Symbol.iterator];return b?b.call(a):$jscomp.arrayIterator(a)};$jscomp.generator={};$jscomp.generator.ensureIteratorResultIsObject_=function(a){if(!(a instanceof Object))throw new TypeError("Iterator result "+a+" is not an object");};
-$jscomp.generator.Context=function(){this.isRunning_=!1;this.yieldAllIterator_=null;this.yieldResult=void 0;this.nextAddress=1;this.finallyAddress_=this.catchAddress_=0;this.finallyContexts_=this.abruptCompletion_=null};$jscomp.generator.Context.prototype.start_=function(){if(this.isRunning_)throw new TypeError("Generator is already running");this.isRunning_=!0};$jscomp.generator.Context.prototype.stop_=function(){this.isRunning_=!1};
-$jscomp.generator.Context.prototype.jumpToErrorHandler_=function(){this.nextAddress=this.catchAddress_||this.finallyAddress_};$jscomp.generator.Context.prototype.next_=function(a){this.yieldResult=a};$jscomp.generator.Context.prototype.throw_=function(a){this.abruptCompletion_={exception:a,isException:!0};this.jumpToErrorHandler_()};$jscomp.generator.Context.prototype.return=function(a){this.abruptCompletion_={return:a};this.nextAddress=this.finallyAddress_};
-$jscomp.generator.Context.prototype.jumpThroughFinallyBlocks=function(a){this.abruptCompletion_={jumpTo:a};this.nextAddress=this.finallyAddress_};$jscomp.generator.Context.prototype.yield=function(a,b){this.nextAddress=b;return{value:a}};$jscomp.generator.Context.prototype.yieldAll=function(a,b){a=$jscomp.makeIterator(a);var c=a.next();$jscomp.generator.ensureIteratorResultIsObject_(c);if(c.done)this.yieldResult=c.value,this.nextAddress=b;else return this.yieldAllIterator_=a,this.yield(c.value,b)};
-$jscomp.generator.Context.prototype.jumpTo=function(a){this.nextAddress=a};$jscomp.generator.Context.prototype.jumpToEnd=function(){this.nextAddress=0};$jscomp.generator.Context.prototype.setCatchFinallyBlocks=function(a,b){this.catchAddress_=a;void 0!=b&&(this.finallyAddress_=b)};$jscomp.generator.Context.prototype.setFinallyBlock=function(a){this.catchAddress_=0;this.finallyAddress_=a||0};$jscomp.generator.Context.prototype.leaveTryBlock=function(a,b){this.nextAddress=a;this.catchAddress_=b||0};
-$jscomp.generator.Context.prototype.enterCatchBlock=function(a){this.catchAddress_=a||0;a=this.abruptCompletion_.exception;this.abruptCompletion_=null;return a};$jscomp.generator.Context.prototype.enterFinallyBlock=function(a,b,c){c?this.finallyContexts_[c]=this.abruptCompletion_:this.finallyContexts_=[this.abruptCompletion_];this.catchAddress_=a||0;this.finallyAddress_=b||0};
-$jscomp.generator.Context.prototype.leaveFinallyBlock=function(a,b){b=this.finallyContexts_.splice(b||0)[0];if(b=this.abruptCompletion_=this.abruptCompletion_||b){if(b.isException)return this.jumpToErrorHandler_();void 0!=b.jumpTo&&this.finallyAddress_<b.jumpTo?(this.nextAddress=b.jumpTo,this.abruptCompletion_=null):this.nextAddress=this.finallyAddress_}else this.nextAddress=a};$jscomp.generator.Context.prototype.forIn=function(a){return new $jscomp.generator.Context.PropertyIterator(a)};
-$jscomp.generator.Context.PropertyIterator=function(a){this.object_=a;this.properties_=[];for(var b in a)this.properties_.push(b);this.properties_.reverse()};$jscomp.generator.Context.PropertyIterator.prototype.getNext=function(){for(;0<this.properties_.length;){var a=this.properties_.pop();if(a in this.object_)return a}return null};$jscomp.generator.Engine_=function(a){this.context_=new $jscomp.generator.Context;this.program_=a};
-$jscomp.generator.Engine_.prototype.next_=function(a){this.context_.start_();if(this.context_.yieldAllIterator_)return this.yieldAllStep_(this.context_.yieldAllIterator_.next,a,this.context_.next_);this.context_.next_(a);return this.nextStep_()};
-$jscomp.generator.Engine_.prototype.return_=function(a){this.context_.start_();var b=this.context_.yieldAllIterator_;if(b)return this.yieldAllStep_("return"in b?b["return"]:function(a){return{value:a,done:!0}},a,this.context_.return);this.context_.return(a);return this.nextStep_()};
-$jscomp.generator.Engine_.prototype.throw_=function(a){this.context_.start_();if(this.context_.yieldAllIterator_)return this.yieldAllStep_(this.context_.yieldAllIterator_["throw"],a,this.context_.next_);this.context_.throw_(a);return this.nextStep_()};
-$jscomp.generator.Engine_.prototype.yieldAllStep_=function(a,b,c){try{var e=a.call(this.context_.yieldAllIterator_,b);$jscomp.generator.ensureIteratorResultIsObject_(e);if(!e.done)return this.context_.stop_(),e;var d=e.value}catch(f){return this.context_.yieldAllIterator_=null,this.context_.throw_(f),this.nextStep_()}this.context_.yieldAllIterator_=null;c.call(this.context_,d);return this.nextStep_()};
-$jscomp.generator.Engine_.prototype.nextStep_=function(){for(;this.context_.nextAddress;)try{var a=this.program_(this.context_);if(a)return this.context_.stop_(),{value:a.value,done:!1}}catch(b){this.context_.yieldResult=void 0,this.context_.throw_(b)}this.context_.stop_();if(this.context_.abruptCompletion_){a=this.context_.abruptCompletion_;this.context_.abruptCompletion_=null;if(a.isException)throw a.exception;return{value:a.return,done:!0}}return{value:void 0,done:!0}};
-$jscomp.generator.Generator_=function(a){this.next=function(b){return a.next_(b)};this.throw=function(b){return a.throw_(b)};this.return=function(b){return a.return_(b)};$jscomp.initSymbolIterator();this[Symbol.iterator]=function(){return this}};$jscomp.generator.createGenerator=function(a,b){b=new $jscomp.generator.Generator_(new $jscomp.generator.Engine_(b));$jscomp.setPrototypeOf&&$jscomp.setPrototypeOf(b,a.prototype);return b};
-(function(a,b){"undefined"!==typeof module&&"object"===typeof exports?module.exports=b():"function"===typeof define&&(define.amd||define.cmd)?define(function(){return b}):a.Nucleoid=b()})(this||("undefined"!==typeof window?window:global),function(){var a=function(d){this.baseName=d};a.prototype.systemError=function(d,a,b){b=void 0===b?"$_no_error":b;"$_no_error"!==b&&(console.log("%c error object is : ","color:#FFF; background:red"),console.log(b));throw Error("(\u2609\u0434\u2299)!! Nucleoid::"+
-this.baseName+" => "+d+" -> "+a);};var b=function(){this.baseName="Methods";this.pool={};this.group={};this.regsterGroupMode=!1;return this};$jscomp.inherits(b,a);b.prototype.regster=function(d,a,b){if("function"!==typeof a||"string"!==typeof d)return this.systemError("regster","Params type error, try regsterMethod(string, function).",d),null;if(/\-/g.test(d)&&!1===this.regsterGroupMode)return this.systemError("regster",'Name can\'t has "-".',d),null;null==this.pool[d]?this.pool[d]={use:[],group:this.regsterGroupMode?
-b:null,method:a}:this.systemError("regster","Method name already exists.",d)};b.prototype.regsterGroup=function(d,a){var b=this;null==this.group[d]?"function"===typeof a?(this.regsterGroupMode=!0,this.group[d]=!0,a(function(a,f){b.regster(d+"-"+a,f,d)}),this.regsterGroupMode=!1):this.systemError("regsterGroup","Template not a function.",a):this.systemError("regsterGroup","Group name already exists.",name)};b.prototype.use=function(a){if(this.pool[a]){var d={};a=this.pool[a].method(d,this.piece(a));
-if("function"===typeof a)return{store:d,action:a};this.systemError("use","Action not a function.",a)}else this.systemError("use","Method not found.",a)};b.prototype.piece=function(a){var d=this.pool[a].group?this.pool[a].group+"-":"";return function(b){b=d+b;!1===this.pool[a].use.includes(b)&&this.pool[a].use.push(b);return this.use(b)}.bind(this)};b.prototype.getMaps=function(a){for(var d=[],b=this.pool[a].use.length,c=0;c<b;c++)d.push(this.getMaps(this.pool[a].use[c]));return{name:a,used:d}};var c=
-new b,e=function(a,b){this.baseName="Transcription";this.name="";this.start=Date.now();this.stack=[];this.finish=!1;this.operating="undefined"===typeof window?"node":"browser";this.runIndex=0;this.callback=b;this.nucleoid=a;this.bindGetMaps=c.getMaps.bind(c);this.initTimeOut();this.initGenerator();this.initUncaughtException();this.validateNucleoid();return this};$jscomp.inherits(e,a);e.prototype.validateNucleoid=function(){this.validate()&&(this.name=this.nucleoid.name,this.doNext())};e.prototype.validate=
-function(){var a={name:[!0,"string"],trymode:[!0,"boolean"],trymodeError:[!1,"function"],timeout:[!1,"number"],timeoutError:[!1,"function"],promoter:[!1,"function"],messenger:[!0,"object"],mediator:[!1,"function"],methods:[!1,"object"],terminator:[!1,"function"],uncaughtExceptionError:[!1,"function"]};for(c in a){var b=this.nucleoid[c];if(a[c][0]&&null==b)return this.systemError("validateNucleoid","Data "+c+" must required.",b),!1;if(null!==b&&a[c][1]!==typeof b)return this.systemError("validateNucleoid",
-"Data type must "+a[c][1]+".",b),!1}if(!1===Array.isArray(this.nucleoid.genes))return this.systemError("validateNucleoid","Data type must array.",this.nucleoid.genes),!1;for(a=0;a<this.nucleoid.genes.length;a++){var c=this.nucleoid.genes[a];if("string"!==typeof c.name||"function"!==typeof c.action)return this.systemError("validateNucleoid","Genes type Incorrect.",c),!1}return!0};e.prototype.addStack=function(a,b){var d={step:a,start:this.now};b&&(d.desc=b);"queue"===a&&(d.used=[]);this.stack.push(d)};
-e.prototype.initGenerator=function(){var a=1E4,b=this,c=this.exit.bind(this),e=this.getMethods.bind(this);this.runtime=function g(){var d;return $jscomp.generator.createGenerator(g,function(f){switch(f.nextAddress){case 1:b.nucleoid.timeoutError&&b.nucleoid.timeout&&(b.timeout=setTimeout(b.timeoutEvent,b.nucleoid.timeout)),b.nucleoid.promoter&&(b.addStack("promoter"),b.nucleoid.promoter(b.nucleoid.messenger,c)),d={};case 2:if(!(0<=a)){f.jumpTo(3);break}if(b.finish){f.jumpTo(3);break}else null==b.nucleoid.genes[b.runIndex]?
-(b.addStack("finish"),c()):(d.next=b.next.bind(b),b.addStack("queue",b.nucleoid.genes[b.runIndex].name),b.nucleoid.genes[b.runIndex].action(b.nucleoid.messenger,function(a){return function(){a.next?(a.next(),a.next=null):console.warn("Nucleoid("+b.nucleoid.name+") => Next already called.")}}(d),e),b.runIndex+=1);a--;return f.yield(void 0,4);case 4:d={next:d.next};f.jumpTo(2);break;case 3:return f.return()}})}()};e.prototype.initUncaughtException=function(){var a=this;null!=this.nucleoid.uncaughtExceptionError&&
-(this.uncaughtExceptionError=function(b){a.addStack("uncaught exception",b.message);a.nucleoid.uncaughtExceptionError(a.nucleoid.messenger,b);a.exit()}.bind(this),"node"===this.operating?(this.uncaughtExceptionDomain=require("domain").create(),this.uncaughtExceptionDomain.on("error",this.uncaughtExceptionError)):window.addEventListener("error",this.uncaughtExceptionError))};e.prototype.initTimeOut=function(){var a=this;this.timeout=null;this.timeoutEvent=function(){a.addStack("timeout");a.nucleoid.timeoutError(a.nucleoid.messenger);
-a.exit()}};e.prototype.getMethods=function(a){if(this.nucleoid.methods[a])return this.stack.slice(-1)[0].used.push(this.bindGetMaps(a)),this.nucleoid.methods[a];this.systemError("getMethods","Methods("+a+") not found")};e.prototype.getMode=function(){var a=[];this.nucleoid.trymode&&a.push("try-catch-mode");this.nucleoid.timeoutError&&a.push("timeout");this.nucleoid.uncaughtExceptionError&&a.push("uncaught-exception-mode");return a};e.prototype.createStatus=function(){return{name:this.name,mode:this.getMode(),
-step:this.stack.slice(-1)[0].step,stack:this.stack,totalRunTime:this.now,useMethods:Object.keys(this.nucleoid.methods)}};e.prototype.exit=function(){if(0==this.finish){this.finish=!0;this.timeout&&(clearTimeout(this.timeout),this.timeout=null);null!=this.nucleoid.uncaughtExceptionError&&"node"!==this.operating&&window.removeEventListener("error",this.uncaughtExceptionError);var a=this.createStatus();this.nucleoid.terminator&&this.nucleoid.terminator(this.nucleoid.messenger,a);this.callback({status:a,
-messenger:this.nucleoid.messenger})}else console.warn("Nucleoid("+this.nucleoid.name+") => Exit already called.")};e.prototype.next=function(){var a=this;!1===this.finish&&(this.nucleoid.mediator&&(this.addStack("mediator"),this.nucleoid.mediator(this.nucleoid.messenger,this.exit.bind(this))),setTimeout(function(){a.doNext()},1))};e.prototype.doNext=function(){this.actionTryMode()};e.prototype.actionTryMode=function(){if(this.nucleoid.trymode)try{this.actionUncaughtException()}catch(d){this.nucleoid.trymodeError&&
-this.nucleoid.trymodeError(this.nucleoid.messenger,d),this.addStack("catch",d.message),this.exit()}else this.actionUncaughtException()};e.prototype.actionUncaughtException=function(){var a=this;this.nucleoid.uncaughtExceptionError&&"node"===this.operating?this.uncaughtExceptionDomain.run(function(){a.runtime.next()}):this.runtime.next()};$jscomp.global.Object.defineProperties(e.prototype,{now:{configurable:!0,enumerable:!0,get:function(){return Date.now()-this.start}}});b=function(){this.baseName=
-"Nucleoid";this.genes=[];this.trymode=!1;this.trymodeError=null;this.timeout=3600;this.terminator=this.mediator=this.promoter=this.timeoutError=null;this.messenger={};this.methods={};this.uncaughtExceptionError=null;this._protection={};this.setName("No name");return this};$jscomp.inherits(b,a);b.eat=function(a,b){(b=b.template)?c.regsterGroup(a,b):this.systemError("eat","Template not found.")};b.regsterMethod=function(a,b){c.regster(a,b)};b.hasMethod=function(a){return!!c.pool[a]};b.prototype.setName=
-function(a){"string"===typeof a?this.name=a:this.systemError("setName","Name not a string.",a)};b.prototype.setTimeout=function(a,b){"number"===typeof a&&"function"===typeof b?(this.timeout=a,this.timeoutError=b):this.systemError("setTimeout","Params type error. try setTimeout(number, function)")};b.prototype.setTrymode=function(a,b){"boolean"!==typeof a||"function"!==typeof b&&null!=b?this.systemError("setTrymode","Params type error, try setTrymode(boolean, function)."):(this.trymode=a,this.trymodeError=
-b)};b.prototype.addMessenger=function(a,b,c){var d=this;null==this.messenger[a]||!0===(void 0===c?!1:c)?"$"===a.slice(0,1)?(this._protection[a]=b,Object.defineProperty(this.messenger,a,{set:function(){d.systemError("addMessenger","This key is a private key, can't be change.",a)},get:function(){return d._protection[a]}})):this.messenger[a]=b:this.systemError("addMessenger","Messenger key already exists.",a)};b.prototype.use=function(a){null==this.methods[a]?this.methods[a]=c.use(a):this.systemError("use",
-"Method already exists.",a)};b.prototype.queue=function(a,b){"string"===typeof a?"function"===typeof b?this.genes.push({name:a,action:b}):this.systemError("queue","Action not a function.",b):this.systemError("queue","Name not a string.",a)};b.prototype.setPromoter=function(a){"function"===typeof a?null==this.promoter?this.promoter=a:this.systemError("setPromoter","Promoter already exists.",this.promoter):this.systemError("setPromoter","Promoter not a function.",a)};b.prototype.setMediator=function(a){"function"===
-typeof a?null==this.mediator?this.mediator=a:this.systemError("setPromoter","Promoter already exists.",this.mediator):this.systemError("setMediator","Mediator not a function.",a)};b.prototype.setTerminator=function(a){"function"===typeof a?null==this.terminator?this.terminator=a:this.systemError("setTerminator","Terminator already exists.",this.terminator):this.systemError("setTerminator","Terminator not a function.",a)};b.prototype.setUncaughtException=function(a,b){!1===a?this.uncaughtExceptionError=
-null:"function"===typeof b?null==this.uncaughtExceptionError?this.uncaughtExceptionError=b:this.systemError("setUncaughtException","Uncaught Exception already exists.",this.uncaughtExceptionError):this.systemError("setUncaughtException","Not a function.",b)};b.prototype.transcription=function(){var a=this;this.transcription=function(){console.warn("Nucleoid("+this.name+") => Transcription already called.")};return new Promise(function(b){new e(a,b)})};return b});
+
+
+    (function( root, factory ){
+    
+        let moduleName = 'Nucleoid';
+    
+        if( typeof module !== 'undefined' && typeof exports === 'object' ) {
+            module.exports = factory();
+        }
+        else if ( typeof define === 'function' && (define.amd || define.cmd) ) {
+            define(function() { return factory; });
+        } 
+        else {
+            root[moduleName] = factory();
+        }
+    
+    })( this || (typeof window !== 'undefined' ? window : global), function(){
+        /**
+ * @class ModuleBase()
+ * @desc 系統殼層
+ */
+
+class ModuleBase {
+
+    constructor(name){
+        this.baseName = name;
+    }
+
+    /**
+     * @function systemError(functionName,maessage,object)
+     * @desc 於console呼叫錯誤，中斷程序並顯示錯誤的物件
+     */
+
+    systemError( functionName, message, object = '$_no_error' ){
+        if( object !== '$_no_error' ){
+            console.log( `%c error object is : `, 'color:#FFF; background:red' );
+            console.log( object );
+        }
+        throw new Error( `(☉д⊙)!! Nucleoid::${this.baseName} => ${functionName} -> ${message}` );
+    }
+
+    noKey( functionName, target, key ) {
+        if( target[key] == null ){
+            return true;
+        } else {
+            this.systemError( functionName, 'Name already exists.', key );
+            return false;
+        } 
+    }
+
+    verify(data, validate) {
+        let newData = {}
+        for( let key in validate ){
+            let v = validate[key];
+            if( v[0] && data[key] == null ){
+                this.systemError('verify', 'Must required', key);
+                return;
+            }
+            if( data[key] ){
+                if( typeof v[1] === typeof data[key] ){
+                    newData[key] = data[key];
+                } else {
+                    this.systemError('verify', `Type(${typeof v[1]}) error`, key);
+                }
+            } else {
+                newData[key] = v[1];
+            }
+        }
+        return newData;
+    }
+
+}
+
+class Case {}
+class MethodGroup extends ModuleBase {
+
+    constructor(options = {}, main) {
+        super("MethodGroup")
+        this.main = main || false
+        this.case = new Case();
+        this.pool = {};
+        this.store = {};
+        this.data = this.verify(options, {
+            create: [false, function(){}]
+        })
+    }
+
+    create(options){
+        this.data.create.bind(this.case)(this.store, options)
+        this.create = null;
+    }
+
+    getMethod(name) {
+        if( this.main ){
+            return MethodBucket.getMethod(name)
+        } else {
+            if( this.pool[name] ){
+                return this.pool[name]
+            } else {
+                this.systemError('getMethod', 'method not found.', name)
+            }
+        }
+    }
+
+    addMethod(options) {
+        let method = new Method(options, this)
+        if( this.noKey('addMethod', this.pool, method.name ) ){
+            this.pool[method.name] = method
+        }
+    }
+
+    hasMethod(name) {
+        return !!this.pool[name]
+    }
+
+}
+class Method extends ModuleBase {
+    
+    constructor( options = {}, group ) {
+        super('Method');
+        this.used = [];
+        this.store = {};
+        this.group = group;
+        this.data = this.verify(options, {
+            name: [true, ''],
+            create: [false, function(){}],
+            action: [true, function(){}]
+        })
+        this.init();
+    }
+
+    get name() { return this.data.name }
+
+    init() {
+        if( this.group == null ){
+            this.systemError('init', 'No has group', this)
+        }
+        if( this.name.includes('-') ){
+            this.systemError('init', 'Symbol - is group protection.', name)
+        }
+        this.case = new Case()
+    }
+
+    create() {
+        this.data.create.bind(this.case)({
+            store: this.store,
+            include: this.include
+        });
+        this.create = null
+    }
+
+    include(name) {
+        if( this.used.includes(name) === false ){
+            this.used.push(name)
+        }
+        return this.group.getMethod(name).use()
+    }
+
+    getGroupStore(name) {
+        return this.group.store[name]
+    }
+
+    system() {
+        return {
+            store: this.store,
+            getGroupStore: this.getGroupStore.bind(this)
+        }
+    }
+
+    action(params, callback) {
+        let error = function(error){
+            callback(error, null);
+        }
+        let success = function(success) {
+            callback(null, success);
+        }
+        this.data.action.bind(this.case)( params, this.system(), error, success );
+    }
+
+    promise(params) {
+        return new Promise(( resolve, reject )=>{
+            this.data.action.bind(this.case)( params, this.system(), reject, resolve );
+        })
+    }
+
+    getStore(key) {
+        if( this.store[key] ){
+            return this.store[key]
+        } else {
+            this.systemError('getStore', 'Key not found.', key)
+        }
+    }
+
+    use() {
+        if( this.create ){ 
+            this.create()
+        }
+        return {
+            store: this.getStore,
+            action: this.action.bind(this),
+            promise: this.promise.bind(this)
+        }
+    }
+
+}
+
+class Bucket extends ModuleBase {
+
+    constructor() {
+        super("Bucket")
+        this.mainGroup = new MethodGroup( {}, true );
+        this.groups = {};
+    }
+
+    hasGroup(name) {
+        return !!this.groups[name]
+    }
+
+    hasMethod(name) {
+        return !!this.mainGroup.hasMethod(name)
+    }
+
+    getMethod(name) {
+        let groupMode = name.includes('-');
+        let split = groupMode ? name.split('-') : [null, name];
+        let target = groupMode ? this.groups[split[0]] : this.mainGroup
+        if( target ){
+            let method = target.pool[split[1]];
+            if( method ){
+                return method
+            } else {
+                console.log(this)
+                this.systemError('getMethod', 'Method not found.', split[1])
+            }
+        } else {
+            this.systemError('getMethod', 'Group not found.', split[0])
+        }
+    }
+
+    addMethod(method) {
+        this.mainGroup.addMethod(method)
+    }
+
+    addGroup(name, group, options) {
+        if( this.groups[name] == null ) {
+            if( group instanceof MethodGroup ){
+                if( group.create ){
+                    group.create(options)
+                }
+                this.groups[name] = group;
+            } else {
+                this.systemError('addGroup', 'Must group.', group)
+            }
+        } else {
+            this.systemError('addGroup', 'Name already exists.', name);
+        }
+    }
+
+}
+
+let MethodBucket = new Bucket()
+/**
+ * @class Transcription(nucleoid,callback)
+ * @desc 轉錄nucleoid並輸出messenger，他會在運行Nucleoid Transcription實例化，保護其不被更改到
+ */
+
+class Transcription extends ModuleBase {
+
+    constructor( nucleoid, callback, reject ){
+        super("Transcription");
+        this.name = "";
+        this.used = [];
+        this.start = Date.now();
+        this.stack = [];
+        this.fail = null;
+        this.finish = false;
+        this.reject = reject;
+        this.operating = typeof window === 'undefined' ? 'node' : 'browser';
+        this.runIndex = 0;
+        this.callback = callback;
+        this.nucleoid = nucleoid;
+        this.targetStack = null;
+        this.initTimeOut();
+        this.initGenerator();
+        this.initUncaughtException();
+        this.validateNucleoid();
+    }
+
+    getSystem() {
+        return {
+            fail: this.callFail.bind(this),
+            mixin: this.mixin.bind(this),
+            methods: this.methods.bind(this),
+            template: this.template.bind(this)
+        }
+    }
+
+    template({thread, error, finish}) {
+        let over = 0;
+        let stop = false;
+        let uning = 0;
+        let threadList = [];
+        let onload = function() {
+            over += 1;
+            if( over === uning && stop === false ){
+                finish();
+            }
+        }
+        let reject = function(e) {
+            if( stop === false ){
+                stop = true
+                error(e);
+            }
+        }
+        let regster = async function(action){
+            uning += 1;
+            threadList.push(action);
+        }
+        thread(regster);
+        for( let i = 0; i < threadList.length; i++ ){
+            threadList[i](onload, reject);
+        }
+        if( threadList.length === 0 ){
+            finish();
+        }
+    }
+    
+    /**
+     * @function method()
+     * @desc 獲取使用的模塊
+     */
+
+    methods(name){
+        let method = MethodBucket.getMethod(name).use();
+        this.addStackExtra('used', {
+            name : name,
+            used : MethodBucket.getMethod(name).used
+        }, 'list');
+        return method;
+    }
+
+    mixin(nucleoid, callback) {
+        if (nucleoid instanceof Nucleoid) {
+            nucleoid.transcription().then((result)=>{
+                this.addStackExtra('mixin', {
+                    status: result.status
+                });
+                callback(null, result.messenger)
+            }, (error) => {
+                callback(error, null)
+            })
+        } else {
+            this.systemError('mixin', `Target not a nucleoid module.`, nucleoid)
+        }
+    }
+
+    callFail(error) {
+        this.fail = true
+        this.reject({
+            error,
+            messenger: this.nucleoid.messenger,
+            status: this.createStatus()
+        })
+    }
+
+    /**
+     * @member {numbre} 當前時間
+     */
+
+    get now(){
+        return Date.now() - this.start;
+    }
+
+    /**
+     * @function validateNucleoid()
+     * @desc 驗證Nucleoid的結構是否正確，是開始運行
+     */
+
+    validateNucleoid(){
+        if( this.validate() ){
+            this.name = this.nucleoid.name;
+            this.doNext();
+        }
+    }
+
+    /**
+     * @function validate()
+     * @desc 驗證Nucleoid過程
+     */
+
+    validate(){
+        let template = {
+            name : [true, 'string'],
+            tryCatchMode : [true, 'boolean'],
+            tryCatchModeAction : [false, 'function'],
+            timeout : [false, 'number'],
+            timeoutAction : [false, 'function'],
+            promoter : [false, 'function'],
+            messenger : [true, 'object'],
+            mediator : [false, 'function'],
+            terminator : [false, 'function'],
+            uncaughtException: [true, 'boolean'],
+            uncaughtExceptionAction: [false, 'function']
+        }
+        //cycle
+        for( let key in template ){
+            let target = this.nucleoid[key];
+            if( template[key][0] && target == null ){
+                this.systemError( 'validateNucleoid', `Data ${key} must required.`, target );
+                return false;
+            }
+            if( target !== null && template[key][1] !== typeof target ){
+                this.systemError( 'validateNucleoid', `Data type must ${template[key][1]}.`, target );
+                return false;
+            }
+        }
+        //gene
+        if( Array.isArray(this.nucleoid.queues) === false ){
+            this.systemError( 'validateNucleoid', `Data type must array.`, this.nucleoid.queues );
+            return false;
+        }
+        for( let i = 0; i < this.nucleoid.queues.length; i++ ){
+            let target = this.nucleoid.queues[i]
+            if( typeof target.name !== "string" || typeof target.action !== "function" ){
+                this.systemError( 'validateNucleoid', `Queues type Incorrect.`, target );
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @function addStack(step,desc)
+     * @desc 加入一個堆棧追蹤
+     * @param {string} step 堆棧名稱 
+     */
+
+    addStack( step, desc ){
+        let stack = {
+            step : step,
+            start : this.now,
+        }
+        if( desc ){
+            stack.desc = desc
+        }
+        this.stack.push(stack)
+        return stack
+    }
+
+    addStackExtra( name, extra, mode ){
+        if( this.targetStack ){
+            if( mode === "list" ){
+                if( this.targetStack[name] == null ){
+                    this.targetStack[name] = [];
+                }
+                this.targetStack[name].push(extra);
+            } else {
+                this.targetStack[name] = extra;
+            }
+        }
+    }
+
+    /**
+     * @function initGenerator()
+     * @desc 初始化Generator
+     */
+
+    initGenerator(){
+        let max = 10000;
+        let self = this;
+        let exit = this.exit.bind(this);
+        let generator = function * (){
+            if( self.nucleoid.timeoutError && self.nucleoid.timeout ){
+                self.timeout = setTimeout( self.timeoutEvent, self.nucleoid.timeout )
+            }
+            if( self.nucleoid.promoter ){
+                self.addStack('promoter');
+                self.nucleoid.promoter( self.nucleoid.messenger, exit );
+            }
+            while( max >= 0 ){
+                if( self.finish ){
+                    break;
+                } else {
+                    if( self.nucleoid.queues[self.runIndex] == null ){
+                        self.addStack('finish');
+                        exit();
+                    } else {
+                        let next = self.next.bind(self);
+                        self.targetStack = self.addStack( 'queue', self.nucleoid.queues[self.runIndex].name );
+                        self.nucleoid.queues[self.runIndex].action( self.nucleoid.messenger, self.getSystem(), ()=>{
+                            if( next ){ 
+                                next();
+                                next = null;
+                            } else {
+                                console.warn(`Nucleoid(${self.nucleoid.name}) => Next already called.`)
+                            }
+                        })
+                        self.runIndex += 1;
+                    }
+                }
+                max--
+                yield;
+            }
+            return;
+        }
+        this.runtime = generator();
+    }
+
+    /**
+     * @function initUncaughtException
+     * @desc 初始化捕捉異步錯誤
+     */
+
+    initUncaughtException(){
+        if( this.nucleoid.uncaughtExceptionError != null ){
+            let error = (error) => {
+                this.addStack('uncaught exception', error.message);
+                this.nucleoid.uncaughtExceptionError( this.nucleoid.messenger, error )
+                this.exit()
+            }
+            this.uncaughtExceptionError = error.bind(this)
+            if( this.operating === 'node' ){
+                this.uncaughtExceptionDomain = require('domain').create();
+                this.uncaughtExceptionDomain.on('error', this.uncaughtExceptionError);
+            }else{
+                window.addEventListener('error', this.uncaughtExceptionError);
+            }
+        }
+    }
+
+    /**
+     * @function initTimeOut()
+     * @desc 初始化Timeout事件與now時間追蹤
+     */
+
+    initTimeOut(){
+        this.timeout = null;
+        this.timeoutEvent = ()=>{
+            this.addStack('timeout');
+            this.nucleoid.timeoutError(this.nucleoid.messenger);
+            this.exit();
+        }
+    }
+
+    /**
+     * @function getMethods()
+     * @desc 獲取模式
+     */
+
+    getMode(){
+        let mode = [];
+        if( this.nucleoid.tryCatchMode ){
+            mode.push('try-catch-mode');
+        }
+        if( this.nucleoid.timeoutAction ){
+            mode.push('timeout');
+        }
+        if( this.nucleoid.uncaughtException ){
+            mode.push('uncaught-exception-mode');
+        }
+        if( this.fail ){
+            mode.push('fail');
+        }
+        return mode
+    }
+
+    /**
+     * @function createStatus()
+     * @desc 建立狀態
+     */
+
+    createStatus(){
+        return {
+            name : this.name,
+            mode : this.getMode(),
+            step : this.stack.slice(-1)[0].step,
+            stack : this.stack,
+            totalRunTime : this.now
+        }
+    }
+
+    /**
+     * @function exit()
+     * @desc 跳出貯列
+     */
+
+    exit(){
+        if( this.finish == false ){
+            this.finish = true;
+            if( this.timeout ){
+                clearTimeout(this.timeout);
+                this.timeout = null;
+            }
+            if( this.nucleoid.uncaughtException && this.operating !== 'node' ){
+                window.removeEventListener('error', this.uncaughtExceptionAction)
+            }
+            let status = this.createStatus();
+            if( this.nucleoid.terminator ){
+                this.nucleoid.terminator(this.nucleoid.messenger, status);
+            }
+            this.callback({
+                status : status,
+                messenger : this.nucleoid.messenger,
+            });
+        } else {
+            console.warn(`Nucleoid(${this.nucleoid.name}) => Exit already called.`)
+        }
+    }
+
+    /**
+     * @function next()
+     * @desc 前往下個貯列
+     */
+
+    next(){
+        if( this.finish === false ){
+            if( this.nucleoid.mediator ){
+                this.addStack('mediator');
+                this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
+            }
+            setTimeout(()=>{
+                this.doNext();
+            }, 1)
+        }
+    }
+
+    doNext(){
+        this.actionTryCatchMode()
+    }
+
+    actionTryCatchMode(){
+        if( this.nucleoid.tryCatchMode ){
+            try{
+                this.actionUncaughtException();
+            } catch (exception) {
+                if( this.nucleoid.tryCatchModeAction ){
+                    this.nucleoid.tryCatchModeAction( this.nucleoid.messenger, exception )
+                }
+                this.addStack('catch', exception.message);
+                this.exit();
+            }
+        } else {
+            this.actionUncaughtException();
+        }
+    }
+
+    actionUncaughtException(){
+        if( this.nucleoid.uncaughtException && this.operating === "node" ){
+            this.uncaughtExceptionDomain.run(() => {
+                this.runtime.next();
+            });
+        } else {
+            this.runtime.next();
+        }
+    }
+
+}
+/**
+ * @class Nucleoid()
+ * @desc 核心
+ */
+
+class Nucleoid extends ModuleBase {
+
+    /**
+     * @member {object} _protection 保護變數，他不會被外部的變數給覆蓋到
+     */
+
+    constructor(){
+        super("Nucleoid");
+        this.queues = [];
+        this.tryCatchMode = false;
+        this.tryCatchModeAction = null;
+        this.timeout = 3600;
+        this.timeoutAction = null;
+        this.uncaughtException = false;
+        this.uncaughtExceptionAction = null;
+        this.promoter = null;
+        this.mediator = null;
+        this.terminator = null;
+        this.messenger = {};
+        this._protection = {};
+        this.setName('No name');
+    }
+
+    static addGroup( groupName, group, options ) {
+        MethodBucket.addGroup( groupName, group, options );
+    }
+
+    static addMethod(options) {
+        MethodBucket.addMethod(options)
+    }
+
+    static hasMethod(name) {
+        MethodBucket.hasMethod(name)
+    }
+
+    static hasGroup(name) {
+        MethodBucket.hasGroup(name)
+    }
+
+    static callMethod(name) {
+        MethodBucket.getMethod(name).use()
+    }
+
+    static createMethodGroup(options) {
+        return new MethodGroup(options)
+    }
+
+    /**
+     * @function setName(name)
+     * @desc 設定名稱
+     */
+
+    setName(name){
+        if( typeof name === "string" ){
+            this.name = name;
+        } else {
+            this.systemError( 'setName', 'Name not a string.', name );
+        }
+    }
+
+    /** 
+     * @function setTimeout(time,error)
+     * @desc 設定逾時事件
+     */
+
+    setTimeout( timeout, error ){
+        if( typeof timeout === "number" && typeof error === "function" ){
+            this.timeout = timeout;
+            this.timeoutAction = error;
+        } else {
+            this.systemError( 'setTimeout', 'Params type error. try setTimeout(number, function)' );
+        }
+    }
+
+    /** 
+     * @function setTrymode(enable,error)
+     * @desc 設定try-catch模式
+     */
+
+    setTrymode( enable, error ){
+        if( typeof enable === "boolean" && ( typeof error === "function" || error == null ) ){
+            this.tryCatchMode = enable;
+            this.tryCatchModeAction = error;
+        } else {
+            this.systemError( 'setTrymode', 'Params type error, try setTrymode(boolean, function).' );
+        }
+    }
+
+    /**
+     * @function setUncaughtException(enable,uncaughtException)
+     * @desc 設定未捕獲模式
+     */
+
+    setUncaughtException( enable, uncaughtException ) {
+        if( typeof enable === "boolean" && typeof uncaughtException === "function" ){
+            if( this.uncaughtExceptionError == null ){
+                this.uncaughtException = enable
+                this.uncaughtExceptionAction = uncaughtException;
+            } else {
+                this.systemError('setUncaughtException', 'Uncaught Exception already exists.', this.uncaughtExceptionError );
+            }
+        }else{
+            this.systemError('setUncaughtException', 'Not a function.', uncaughtException );
+        }
+    }
+
+    /**
+     * @function addMessenger(key,value,force)
+     * @desc 加入一個全域屬性
+     * @param {boolean} force 預設屬性會防止被重複宣告，設定force為true強制取代
+     */
+
+    addMessenger( key, value, force = false ){
+        if( this.messenger[key] == null || force === true ){
+            if( key.slice(0, 1) === "$" ){
+                this._protection[key] = value
+                Object.defineProperty( this.messenger, key, {
+                    set: ()=>{
+                        this.systemError('addMessenger', "This key is a private key, can't be change.", key );
+                    },
+                    get: ()=>{
+                        return this._protection[key];
+                    },
+                })
+            } else {
+                this.messenger[key] = value
+            }
+        } else {
+            this.systemError('addMessenger', 'Messenger key already exists.', key );
+        }
+    }
+
+    /**
+     * @function queue(name,action)
+     * @desc 加入一個貯列
+     */
+
+    queue( name, action ) {
+        if( typeof name === 'string' ){
+            if( typeof action === 'function' ){
+                this.queues.push({
+                    name : name,
+                    action : action,
+                });
+            }else{
+                this.systemError( 'queue', 'Action not a function.', action );
+            }
+        } else {
+            this.systemError( 'queue', 'Name not a string.', name );
+        }
+    }
+
+    /** 
+     * @function setPromoter(promoter)
+     * @desc 設定啟動事件
+     */
+
+    setPromoter(promoter) {
+        if( typeof promoter === 'function' ){
+            if( this.promoter == null ){
+                this.promoter = promoter;
+            } else {
+                this.systemError('setPromoter', 'Promoter already exists.', this.promoter );
+            }
+        }else{
+            this.systemError('setPromoter', 'Promoter not a function.', promoter );
+        }
+    }
+
+    /** 
+     * @function setMediator(mediator)
+     * @desc 設定中介事件
+     */
+
+    setMediator(mediator) {
+        if( typeof mediator === 'function' ){
+            if( this.mediator == null ){
+                this.mediator = mediator;
+            } else {
+                this.systemError('setPromoter', 'Promoter already exists.', this.mediator );
+            }
+        }else{
+            this.systemError('setMediator', 'Mediator not a function.', mediator );
+        }
+    }
+
+    /** 
+     * @function setTerminator(terminator)
+     * @desc 設定結束事件
+     */
+
+    setTerminator(terminator) {
+        if( typeof terminator === 'function' ){
+            if( this.terminator == null ){
+                this.terminator = terminator;
+            } else {
+                this.systemError('setTerminator', 'Terminator already exists.', this.terminator );
+            }
+        }else{
+            this.systemError('setTerminator', 'Terminator not a function.', terminator );
+        }
+    }
+
+    /** 
+     * @function transcription()
+     * @desc 執行系統
+     * @returns {Promise}
+     */
+
+    transcription() {
+        this.transcription = function(){
+            console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
+        }
+        return new Promise(( resolve, reject )=>{
+            new Transcription( this, resolve, reject )
+        })
+    }
+
+}
+
+
+            let __re = Nucleoid;
+            
+            return __re;
+        
+    })
