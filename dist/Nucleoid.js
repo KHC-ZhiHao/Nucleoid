@@ -205,7 +205,7 @@ class Method extends ModuleBase {
             this.create()
         }
         return {
-            store: this.getStore,
+            store: this.getStore.bind(this),
             direct: this.direct.bind(this),
             action: this.action.bind(this),
             promise: this.promise.bind(this)
