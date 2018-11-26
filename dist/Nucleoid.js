@@ -525,7 +525,7 @@ class Transcription extends ModuleBase {
         if( this.nucleoid.uncaughtException ){
             let error = (error) => {
                 this.addStack('uncaught exception', error.message);
-                this.nucleoid.uncaughtExceptionAction( this.nucleoid.messenger, error )
+                this.nucleoid.uncaughtExceptionAction( this.nucleoid.messenger, error, this.callFail.bind(this) )
                 this.exit()
             }
             this.uncaughtExceptionError = error.bind(this)
@@ -547,7 +547,7 @@ class Transcription extends ModuleBase {
         this.timeout = null;
         this.timeoutEvent = ()=>{
             this.addStack('timeout');
-            this.nucleoid.timeoutAction(this.nucleoid.messenger);
+            this.nucleoid.timeoutAction(this.nucleoid.messenger, this.callFail.bind(this));
             this.exit();
         }
     }
@@ -626,7 +626,7 @@ class Transcription extends ModuleBase {
         if( this.finish === false ){
             if( this.nucleoid.mediator ){
                 this.addStack('mediator');
-                this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this) )
+                this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this), this.callFail.bind(this) )
             }
             setTimeout(()=>{
                 this.doNext();
@@ -644,7 +644,7 @@ class Transcription extends ModuleBase {
                 this.actionUncaughtException();
             } catch (exception) {
                 if( this.nucleoid.tryCatchModeAction ){
-                    this.nucleoid.tryCatchModeAction( this.nucleoid.messenger, exception )
+                    this.nucleoid.tryCatchModeAction( this.nucleoid.messenger, exception, this.callFail.bind(this) )
                 }
                 this.addStack('catch', exception.message);
                 this.exit();
