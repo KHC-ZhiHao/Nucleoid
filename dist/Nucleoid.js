@@ -702,15 +702,15 @@ class Nucleoid extends ModuleBase {
     }
 
     static hasMethod(name) {
-        MethodBucket.hasMethod(name)
+        return MethodBucket.hasMethod(name)
     }
 
     static hasGroup(name) {
-        MethodBucket.hasGroup(name)
+        return MethodBucket.hasGroup(name)
     }
 
     static callMethod(name) {
-        MethodBucket.getMethod(name).use()
+        return MethodBucket.getMethod(name).use()
     }
 
     static createMethodGroup(options) {
