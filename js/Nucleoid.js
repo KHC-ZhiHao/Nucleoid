@@ -98,11 +98,11 @@ class Nucleoid extends ModuleBase {
 
     setUncaughtException( enable, uncaughtException ) {
         if( typeof enable === "boolean" && typeof uncaughtException === "function" ){
-            if( this.uncaughtExceptionError == null ){
+            if( this.uncaughtExceptionAction == null ){
                 this.uncaughtException = enable
                 this.uncaughtExceptionAction = uncaughtException;
             } else {
-                this.systemError('setUncaughtException', 'Uncaught Exception already exists.', this.uncaughtExceptionError );
+                this.systemError('setUncaughtException', 'Uncaught Exception already exists.', this.uncaughtExceptionAction );
             }
         }else{
             this.systemError('setUncaughtException', 'Not a function.', uncaughtException );

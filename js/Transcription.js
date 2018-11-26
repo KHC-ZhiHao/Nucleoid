@@ -209,7 +209,7 @@ class Transcription extends ModuleBase {
         let self = this;
         let exit = this.exit.bind(this);
         let generator = function * (){
-            if( self.nucleoid.timeoutError && self.nucleoid.timeout ){
+            if( self.nucleoid.timeoutAction && self.nucleoid.timeout ){
                 self.timeout = setTimeout( self.timeoutEvent, self.nucleoid.timeout )
             }
             if( self.nucleoid.promoter ){
@@ -251,10 +251,10 @@ class Transcription extends ModuleBase {
      */
 
     initUncaughtException(){
-        if( this.nucleoid.uncaughtExceptionError != null ){
+        if( this.nucleoid.uncaughtException ){
             let error = (error) => {
                 this.addStack('uncaught exception', error.message);
-                this.nucleoid.uncaughtExceptionError( this.nucleoid.messenger, error )
+                this.nucleoid.uncaughtExceptionAction( this.nucleoid.messenger, error )
                 this.exit()
             }
             this.uncaughtExceptionError = error.bind(this)
@@ -276,7 +276,7 @@ class Transcription extends ModuleBase {
         this.timeout = null;
         this.timeoutEvent = ()=>{
             this.addStack('timeout');
-            this.nucleoid.timeoutError(this.nucleoid.messenger);
+            this.nucleoid.timeoutAction(this.nucleoid.messenger);
             this.exit();
         }
     }
