@@ -144,7 +144,7 @@ class Method extends ModuleBase {
     create() {
         this.data.create.bind(this.case)({
             store: this.store,
-            include: this.include
+            include: this.include.bind(this)
         });
         this.create = null
     }
@@ -167,7 +167,16 @@ class Method extends ModuleBase {
         }
     }
 
-    action(params, callback) {
+    direct(params){
+        let output = null
+        let success = function(data){
+            output = data
+        }
+        this.data.action.bind(this.case)( params, this.system(), function(){}, success );
+        return output
+    }
+
+    action(params, callback = function(){}) {
         let error = function(error){
             callback(error, null);
         }
@@ -197,6 +206,7 @@ class Method extends ModuleBase {
         }
         return {
             store: this.getStore,
+            direct: this.direct.bind(this),
             action: this.action.bind(this),
             promise: this.promise.bind(this)
         }
