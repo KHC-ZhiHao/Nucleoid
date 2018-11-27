@@ -51,13 +51,13 @@ class Transcription extends ModuleBase {
                 error(e);
             }
         }
-        let regster = async function(action){
+        let regster = async function({name, action}){
             uning += 1;
-            threadList.push(action);
+            threadList.push({name, action});
         }
         thread(regster);
         for( let i = 0; i < threadList.length; i++ ){
-            threadList[i](onload, reject);
+            threadList[i].action(onload, reject);
         }
         if( threadList.length === 0 ){
             finish();
