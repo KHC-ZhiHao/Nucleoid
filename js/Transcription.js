@@ -45,7 +45,7 @@ class Transcription extends ModuleBase {
         }
         thread(regster);
         for( let i = 0; i < threadList.length; i++ ){
-            let onload = function() {
+            let onload = ()=>{
                 this.addStackExtra('template', {
                     name : threadList[i].name,
                     success : true
@@ -55,7 +55,7 @@ class Transcription extends ModuleBase {
                     finish();
                 }
             }
-            let reject = function(e) {
+            let reject = (e)=>{
                 this.addStackExtra('template', {
                     name : threadList[i].name,
                     success : false
