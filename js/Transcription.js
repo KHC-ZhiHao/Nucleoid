@@ -39,24 +39,32 @@ class Transcription extends ModuleBase {
         let stop = false;
         let uning = 0;
         let threadList = [];
-        let onload = function() {
-            over += 1;
-            if( over === uning && stop === false ){
-                finish();
-            }
-        }
-        let reject = function(e) {
-            if( stop === false ){
-                stop = true
-                error(e);
-            }
-        }
         let regster = async function({name, action}){
             uning += 1;
             threadList.push({name, action});
         }
         thread(regster);
         for( let i = 0; i < threadList.length; i++ ){
+            let onload = function() {
+                this.addStackExtra('template', {
+                    name : threadList[i].name,
+                    success : true
+                }, 'list');
+                over += 1;
+                if( over === uning && stop === false ){
+                    finish();
+                }
+            }
+            let reject = function(e) {
+                this.addStackExtra('template', {
+                    name : threadList[i].name,
+                    success : false
+                }, 'list');
+                if( stop === false ){
+                    stop = true
+                    error(e);
+                }
+            }
             threadList[i].action(onload, reject);
         }
         if( threadList.length === 0 ){

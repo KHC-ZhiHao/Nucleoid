@@ -23,7 +23,6 @@ class Bucket extends ModuleBase {
             if( method ){
                 return method
             } else {
-                console.log(this)
                 this.systemError('getMethod', 'Method not found.', split[1])
             }
         } else {
