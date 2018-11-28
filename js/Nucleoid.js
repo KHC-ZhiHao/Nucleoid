@@ -34,6 +34,14 @@ class Nucleoid extends ModuleBase {
         MethodBucket.addMethod(options)
     }
 
+    static currying(options) {
+        MethodBucket.currying(options)
+    }
+
+    static hasCurry(name) {
+        return MethodBucket.hasCurry(name)
+    }
+
     static hasMethod(name) {
         return MethodBucket.hasMethod(name)
     }
@@ -44,6 +52,10 @@ class Nucleoid extends ModuleBase {
 
     static callMethod(name) {
         return MethodBucket.getMethod(name).use()
+    }
+
+    static callCurry(name) {
+        return MethodBucket.getCurry(name).use()
     }
 
     static createMethodGroup(options) {

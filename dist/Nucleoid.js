@@ -72,6 +72,158 @@ class ModuleBase {
 }
 
 class Case {}
+class Curry extends ModuleBase {
+
+    constructor(options, group) {
+        super("Curry");
+        this.group = group;
+        this.data = this.verify(options, {
+            name: [true, ''],
+            input: [true, function(){}],
+            output: [true, function(){}],
+            methods: [true, {}]
+        })
+        this.init();
+    }
+
+    get name() { return this.data.name }
+
+    init() {
+        let check = this.data.methods
+        if( check.action || check.promise || check.direct ){
+            this.systemError('init', 'Methods has private key(action, promise, direct)')
+        }
+    }
+
+    use() {
+        return (params) => {
+            let unit = new CurryUnit(this, params);
+            return unit.getRegisterMethod();
+        }
+    }
+
+}
+
+class CurryUnit extends ModuleBase {
+
+    constructor(main, params) {
+        super("CurryUnit");
+        this.case = new Case()
+        this.flow = []
+        this.main = main;
+        this.carry = {},
+        this.index = 0;
+        this.params = params;
+        this.previousFlow = null;
+        this.initRegisterMethod();
+    }
+
+    direct() {
+        let output = null
+        let error = function(error) { output = error }
+        let success = function(data) { output = data }
+        this.activation( error, success )
+        return output;
+    }
+
+    action(callback) {
+        let error = function(error){ callback(error, null) }
+        let success = function(success) { callback(null, success) }
+        this.activation( error, success )
+    }
+
+    promise() {
+        return new Promise(( resolve, reject )=>{
+            this.activation( reject, resolve )
+        })
+    }
+
+    initRegisterMethod() {
+        this.registergMethod = {
+            direct: this.direct.bind(this),
+            action: this.action.bind(this),
+            promise: this.promise.bind(this)
+        }
+        for( let key in this.main.data.methods ){
+            this.registergMethod[key] = (params) => {
+                this.register(key, params);
+                return this.getRegisterMethod();
+            }
+        }
+    }
+
+    getRegisterMethod() {
+        return this.registergMethod;
+    }
+
+    register(name, params) {
+        let data = {
+            name: name,
+            nextFlow: null,
+            previous: this.flow.slice(-1),
+            index: this.index,
+            method: this.main.data.methods[name],
+            params: params
+        }
+        if( this.previousFlow ){
+            this.previousFlow.nextFlow = data
+        }
+        this.previousFlow = data
+        this.index += 1
+        this.flow.push(data)
+    }
+
+    include(name) {
+        return this.main.group.getMethod(name).use()
+    }
+
+    addCarry(name, value) {
+        this.carry[name] = value;
+    }
+
+    getCarry(name) {
+        return this.carry[name];
+    }
+
+    setCarry(name, value) {
+        this.carry[name] = value;
+    }
+
+    activation(error, success) {
+        let stop = false;
+        let index = 0;
+        let reject = (err) => {
+            error(err);
+            stop = true
+        }
+        let next = () => {
+            index += 1
+            if( stop === false ){ run() }
+        }
+        let run = () => {
+            let flow = this.flow[index]
+            if( flow ){
+                flow.method({
+                    get: this.getCarry.bind(this),
+                    set: this.setCarry.bind(this),
+                    index: flow.index,
+                    params: flow.params,
+                    include: this.include.bind(this),
+                    nextFlow: flow.nextFlow,
+                    previous: flow.previous,
+                    error: reject,
+                    next: next
+                })
+            } else {
+                success(this.main.data.output(this.carry))
+            }
+        }
+        this.main.data.input(this.params, this.addCarry.bind(this), reject);
+        if( stop === false ){ run() }
+    }
+
+}
+
 class MethodGroup extends ModuleBase {
 
     constructor(options = {}, main) {
@@ -79,6 +231,7 @@ class MethodGroup extends ModuleBase {
         this.main = main || false
         this.case = new Case();
         this.pool = {};
+        this.curryPool = {};
         this.store = {};
         this.data = this.verify(options, {
             create: [false, function(){}]
@@ -102,11 +255,34 @@ class MethodGroup extends ModuleBase {
         }
     }
 
+    getCurry(name) {
+        if( this.main ){
+            return MethodBucket.getCurry(name)
+        } else {
+            if( this.curryPool[name] ){
+                return this.curryPool[name]
+            } else {
+                this.systemError('getCurry', 'curry not found.', name)
+            }
+        }
+    }
+
+    currying(options){
+        let curry = new Curry(options, this);
+        if( this.noKey('currying', this.curryPool, curry.name ) ){
+            this.curryPool[curry.name] = curry
+        }
+    }
+
     addMethod(options) {
-        let method = new Method(options, this)
+        let method = new Method(options, this);
         if( this.noKey('addMethod', this.pool, method.name ) ){
             this.pool[method.name] = method
         }
+    }
+
+    hasCurry(name) {
+        return !!this.curryPool[name]
     }
 
     hasMethod(name) {
@@ -118,9 +294,11 @@ class Method extends ModuleBase {
     
     constructor( options = {}, group ) {
         super('Method');
+        this.case = new Case()
         this.used = [];
         this.store = {};
         this.group = group;
+        this.private = {};
         this.data = this.verify(options, {
             name: [true, ''],
             create: [false, function(){}],
@@ -144,6 +322,7 @@ class Method extends ModuleBase {
     create() {
         this.data.create.bind(this.case)({
             store: this.store,
+            private: this.private,
             include: this.include.bind(this)
         });
         this.create = null
@@ -163,16 +342,16 @@ class Method extends ModuleBase {
     system() {
         return {
             store: this.store,
+            private: this.private,
             getGroupStore: this.getGroupStore.bind(this)
         }
     }
 
     direct(params){
         let output = null
-        let success = function(data){
-            output = data
-        }
-        this.data.action.bind(this.case)( params, this.system(), function(){}, success );
+        let success = function(data) { output = data }
+        let error = function(error) { output = error }
+        this.data.action.bind(this.case)( params, this.system(), error, success );
         return output
     }
 
@@ -230,6 +409,10 @@ class Bucket extends ModuleBase {
         return !!this.mainGroup.hasMethod(name)
     }
 
+    hasCurry(name) {
+        return !!this.mainGroup.hasCurry(name)
+    }
+
     getMethod(name) {
         let groupMode = name.includes('-');
         let split = groupMode ? name.split('-') : [null, name];
@@ -246,8 +429,28 @@ class Bucket extends ModuleBase {
         }
     }
 
-    addMethod(method) {
-        this.mainGroup.addMethod(method)
+    getCurry(name) {
+        let groupMode = name.includes('-');
+        let split = groupMode ? name.split('-') : [null, name];
+        let target = groupMode ? this.groups[split[0]] : this.mainGroup
+        if( target ){
+            let curry = target.curryPool[split[1]];
+            if( curry ){
+                return curry
+            } else {
+                this.systemError('getCurry', 'Method not found.', split[1])
+            }
+        } else {
+            this.systemError('getCurry', 'Group not found.', split[0])
+        }
+    }
+
+    addMethod(options) {
+        this.mainGroup.addMethod(options)
+    }
+
+    currying(options) {
+        this.mainGroup.currying(options)
     }
 
     addGroup(name, group, options) {
@@ -268,6 +471,7 @@ class Bucket extends ModuleBase {
 }
 
 let MethodBucket = new Bucket()
+
 /**
  * @class Transcription(nucleoid,callback)
  * @desc 轉錄nucleoid並輸出messenger，他會在運行Nucleoid Transcription實例化，保護其不被更改到
@@ -299,6 +503,7 @@ class Transcription extends ModuleBase {
         return {
             fail: this.callFail.bind(this),
             mixin: this.mixin.bind(this),
+            curry: this.curry.bind(this),
             methods: this.methods.bind(this),
             template: this.template.bind(this)
         }
@@ -306,36 +511,40 @@ class Transcription extends ModuleBase {
 
     template({thread, error, finish}) {
         let over = 0;
-        let stop = false;
         let uning = 0;
         let threadList = [];
         let regster = async function({name, action}){
             uning += 1;
-            threadList.push({name, action});
+            threadList.push({
+                name, 
+                action,
+                stop: false
+            });
         }
-        thread(regster);
-        for( let i = 0; i < threadList.length; i++ ){
-            let onload = ()=>{
-                this.addStackExtra('template', {
-                    name : threadList[i].name,
-                    success : true
-                }, 'list');
+        let regsterOnload = (thread)=>{
+            return ()=>{
                 over += 1;
-                if( over === uning && stop === false ){
+                if( thread.stop === false ){
+                    thread.stop = true;
+                    this.addStackExtra( 'template', { name : thread.name, success : true } );
+                }
+                if( over >= uning ){
                     finish();
                 }
             }
-            let reject = (e)=>{
-                this.addStackExtra('template', {
-                    name : threadList[i].name,
-                    success : false
-                }, 'list');
-                if( stop === false ){
-                    stop = true
+        }
+        let regsterError = (thread)=>{
+            return (e)=>{
+                if( thread.stop === false ){
+                    thread.stop = true;
+                    this.addStackExtra( 'template', { name : thread.name, success : false } );
                     error(e);
                 }
             }
-            threadList[i].action(onload, reject);
+        }
+        thread(regster);
+        for( let i = 0; i < threadList.length; i++ ){
+            threadList[i].action( regsterOnload(threadList[i]), regsterError(threadList[i]));
         }
         if( threadList.length === 0 ){
             finish();
@@ -352,22 +561,29 @@ class Transcription extends ModuleBase {
         this.addStackExtra('used', {
             name : name,
             used : MethodBucket.getMethod(name).used
-        }, 'list');
+        });
         return method;
+    }
+
+    curry(name){
+        let curry = MethodBucket.getCurry(name).use();
+        this.addStackExtra('curry', {
+            name : name
+        });
+        return curry;
     }
 
     mixin(nucleoid, callback) {
         if (nucleoid instanceof Nucleoid) {
             nucleoid.transcription().then((result)=>{
-                this.addStackExtra('mixin', {
-                    status: result.status
-                });
+                this.addStackExtra( 'mixin', result.status );
                 callback(null, result.messenger)
             }, (error) => {
+                this.addStackExtra( 'mixin', error.status );
                 callback(error, null)
             })
         } else {
-            this.systemError('mixin', `Target not a nucleoid module.`, nucleoid)
+            this.systemError('mixin', 'Target not a nucleoid module.', nucleoid)
         }
     }
 
@@ -464,16 +680,12 @@ class Transcription extends ModuleBase {
         return stack
     }
 
-    addStackExtra( name, extra, mode ){
+    addStackExtra( name, extra ){
         if( this.targetStack ){
-            if( mode === "list" ){
-                if( this.targetStack[name] == null ){
-                    this.targetStack[name] = [];
-                }
-                this.targetStack[name].push(extra);
-            } else {
-                this.targetStack[name] = extra;
+            if( this.targetStack[name] == null ){
+                this.targetStack[name] = [];
             }
+            this.targetStack[name].push(extra);
         }
     }
 
@@ -708,6 +920,14 @@ class Nucleoid extends ModuleBase {
         MethodBucket.addMethod(options)
     }
 
+    static currying(options) {
+        MethodBucket.currying(options)
+    }
+
+    static hasCurry(name) {
+        return MethodBucket.hasCurry(name)
+    }
+
     static hasMethod(name) {
         return MethodBucket.hasMethod(name)
     }
@@ -718,6 +938,10 @@ class Nucleoid extends ModuleBase {
 
     static callMethod(name) {
         return MethodBucket.getMethod(name).use()
+    }
+
+    static callCurry(name) {
+        return MethodBucket.getCurry(name).use()
     }
 
     static createMethodGroup(options) {

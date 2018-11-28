@@ -5,6 +5,7 @@ class MethodGroup extends ModuleBase {
         this.main = main || false
         this.case = new Case();
         this.pool = {};
+        this.curryPool = {};
         this.store = {};
         this.data = this.verify(options, {
             create: [false, function(){}]
@@ -28,11 +29,34 @@ class MethodGroup extends ModuleBase {
         }
     }
 
+    getCurry(name) {
+        if( this.main ){
+            return MethodBucket.getCurry(name)
+        } else {
+            if( this.curryPool[name] ){
+                return this.curryPool[name]
+            } else {
+                this.systemError('getCurry', 'curry not found.', name)
+            }
+        }
+    }
+
+    currying(options){
+        let curry = new Curry(options, this);
+        if( this.noKey('currying', this.curryPool, curry.name ) ){
+            this.curryPool[curry.name] = curry
+        }
+    }
+
     addMethod(options) {
-        let method = new Method(options, this)
+        let method = new Method(options, this);
         if( this.noKey('addMethod', this.pool, method.name ) ){
             this.pool[method.name] = method
         }
+    }
+
+    hasCurry(name) {
+        return !!this.curryPool[name]
     }
 
     hasMethod(name) {

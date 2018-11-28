@@ -29,6 +29,7 @@ class Transcription extends ModuleBase {
         return {
             fail: this.callFail.bind(this),
             mixin: this.mixin.bind(this),
+            curry: this.curry.bind(this),
             methods: this.methods.bind(this),
             template: this.template.bind(this)
         }
@@ -36,36 +37,40 @@ class Transcription extends ModuleBase {
 
     template({thread, error, finish}) {
         let over = 0;
-        let stop = false;
         let uning = 0;
         let threadList = [];
         let regster = async function({name, action}){
             uning += 1;
-            threadList.push({name, action});
+            threadList.push({
+                name, 
+                action,
+                stop: false
+            });
         }
-        thread(regster);
-        for( let i = 0; i < threadList.length; i++ ){
-            let onload = ()=>{
-                this.addStackExtra('template', {
-                    name : threadList[i].name,
-                    success : true
-                }, 'list');
+        let regsterOnload = (thread)=>{
+            return ()=>{
                 over += 1;
-                if( over === uning && stop === false ){
+                if( thread.stop === false ){
+                    thread.stop = true;
+                    this.addStackExtra( 'template', { name : thread.name, success : true } );
+                }
+                if( over >= uning ){
                     finish();
                 }
             }
-            let reject = (e)=>{
-                this.addStackExtra('template', {
-                    name : threadList[i].name,
-                    success : false
-                }, 'list');
-                if( stop === false ){
-                    stop = true
+        }
+        let regsterError = (thread)=>{
+            return (e)=>{
+                if( thread.stop === false ){
+                    thread.stop = true;
+                    this.addStackExtra( 'template', { name : thread.name, success : false } );
                     error(e);
                 }
             }
-            threadList[i].action(onload, reject);
+        }
+        thread(regster);
+        for( let i = 0; i < threadList.length; i++ ){
+            threadList[i].action( regsterOnload(threadList[i]), regsterError(threadList[i]));
         }
         if( threadList.length === 0 ){
             finish();
@@ -82,22 +87,29 @@ class Transcription extends ModuleBase {
         this.addStackExtra('used', {
             name : name,
             used : MethodBucket.getMethod(name).used
-        }, 'list');
+        });
         return method;
+    }
+
+    curry(name){
+        let curry = MethodBucket.getCurry(name).use();
+        this.addStackExtra('curry', {
+            name : name
+        });
+        return curry;
     }
 
     mixin(nucleoid, callback) {
         if (nucleoid instanceof Nucleoid) {
             nucleoid.transcription().then((result)=>{
-                this.addStackExtra('mixin', {
-                    status: result.status
-                });
+                this.addStackExtra( 'mixin', result.status );
                 callback(null, result.messenger)
             }, (error) => {
+                this.addStackExtra( 'mixin', error.status );
                 callback(error, null)
             })
         } else {
-            this.systemError('mixin', `Target not a nucleoid module.`, nucleoid)
+            this.systemError('mixin', 'Target not a nucleoid module.', nucleoid)
         }
     }
 
@@ -194,16 +206,12 @@ class Transcription extends ModuleBase {
         return stack
     }
 
-    addStackExtra( name, extra, mode ){
+    addStackExtra( name, extra ){
         if( this.targetStack ){
-            if( mode === "list" ){
-                if( this.targetStack[name] == null ){
-                    this.targetStack[name] = [];
-                }
-                this.targetStack[name].push(extra);
-            } else {
-                this.targetStack[name] = extra;
+            if( this.targetStack[name] == null ){
+                this.targetStack[name] = [];
             }
+            this.targetStack[name].push(extra);
         }
     }
 
