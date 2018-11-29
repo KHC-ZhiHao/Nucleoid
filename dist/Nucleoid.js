@@ -733,8 +733,9 @@ class Transcription extends ModuleBase {
     initUncaughtException(){
         if( this.nucleoid.uncaughtException ){
             let error = (error) => {
-                this.addStack('uncaught exception', error.message);
-                this.nucleoid.uncaughtExceptionAction( this.nucleoid.messenger, error, this.callFail.bind(this) )
+                let exception = error.stack ? error : error.error
+                this.addStack('uncaught exception', error.stack ? exception.message : exception.message);
+                this.nucleoid.uncaughtExceptionAction( this.nucleoid.messenger, exception, this.callFail.bind(this) )
                 this.exit()
             }
             this.uncaughtExceptionError = error.bind(this)
