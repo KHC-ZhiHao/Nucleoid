@@ -193,17 +193,23 @@ class CurryUnit extends ModuleBase {
             if( flow ){
                 flow.method.bind(this.case)( ...flow.params, {
                     index: flow.index,
-                    error: reject,
-                    finish: finish,
                     include: this.include.bind(this),
                     nextFlow: flow.nextFlow,
                     previous: flow.previous
-                })
+                }, reject, finish)
             } else {
-                success(this.main.data.output.bind(this.case)())
+                this.main.data.output.bind(this.case)({
+                    include: this.include.bind(this),
+                }, (error)=>{
+                    reject(error)
+                }, (result)=>{
+                    success(result)
+                })
             }
         }
-        this.main.data.input.bind(this.case)(this.params, reject);
+        this.main.data.input.bind(this.case)(this.params, {
+            include: this.include.bind(this)
+        }, reject);
         if( stop === false ){ run() }
     }
 
