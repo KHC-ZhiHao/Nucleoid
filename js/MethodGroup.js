@@ -41,6 +41,14 @@ class MethodGroup extends ModuleBase {
         }
     }
 
+    callMethod(name) {
+        return this.getMethod(name).use()
+    }
+
+    callCurry(name) {
+        return this.getCurry(name).use()
+    }
+
     currying(options){
         let curry = new Curry(options, this);
         if( this.noKey('currying', this.curryPool, curry.name ) ){

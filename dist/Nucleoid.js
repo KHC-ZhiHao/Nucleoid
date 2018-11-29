@@ -111,7 +111,6 @@ class CurryUnit extends ModuleBase {
         this.case = new Case()
         this.flow = []
         this.main = main;
-        this.carry = {},
         this.index = 0;
         this.params = params;
         this.previousFlow = null;
@@ -139,15 +138,16 @@ class CurryUnit extends ModuleBase {
     }
 
     initRegisterMethod() {
+        let self = this;
         this.registergMethod = {
             direct: this.direct.bind(this),
             action: this.action.bind(this),
             promise: this.promise.bind(this)
         }
         for( let key in this.main.data.methods ){
-            this.registergMethod[key] = (params) => {
-                this.register(key, params);
-                return this.getRegisterMethod();
+            this.registergMethod[key] = function() {
+                self.register(key, [...arguments]);
+                return self.getRegisterMethod();
             }
         }
     }
@@ -177,18 +177,6 @@ class CurryUnit extends ModuleBase {
         return this.main.group.getMethod(name).use()
     }
 
-    addCarry(name, value) {
-        this.carry[name] = value;
-    }
-
-    getCarry(name) {
-        return this.carry[name];
-    }
-
-    setCarry(name, value) {
-        this.carry[name] = value;
-    }
-
     activation(error, success) {
         let stop = false;
         let index = 0;
@@ -196,29 +184,26 @@ class CurryUnit extends ModuleBase {
             error(err);
             stop = true
         }
-        let next = () => {
+        let finish = () => {
             index += 1
             if( stop === false ){ run() }
         }
         let run = () => {
             let flow = this.flow[index]
             if( flow ){
-                flow.method({
-                    get: this.getCarry.bind(this),
-                    set: this.setCarry.bind(this),
+                flow.method.bind(this.case)( ...flow.params, {
                     index: flow.index,
-                    params: flow.params,
+                    error: reject,
+                    finish: finish,
                     include: this.include.bind(this),
                     nextFlow: flow.nextFlow,
-                    previous: flow.previous,
-                    error: reject,
-                    next: next
+                    previous: flow.previous
                 })
             } else {
-                success(this.main.data.output(this.carry))
+                success(this.main.data.output.bind(this.case)())
             }
         }
-        this.main.data.input(this.params, this.addCarry.bind(this), reject);
+        this.main.data.input.bind(this.case)(this.params, reject);
         if( stop === false ){ run() }
     }
 
@@ -267,6 +252,14 @@ class MethodGroup extends ModuleBase {
         }
     }
 
+    callMethod(name) {
+        return this.getMethod(name).use()
+    }
+
+    callCurry(name) {
+        return this.getCurry(name).use()
+    }
+
     currying(options){
         let curry = new Curry(options, this);
         if( this.noKey('currying', this.curryPool, curry.name ) ){
@@ -298,7 +291,6 @@ class Method extends ModuleBase {
         this.used = [];
         this.store = {};
         this.group = group;
-        this.private = {};
         this.data = this.verify(options, {
             name: [true, ''],
             create: [false, function(){}],
@@ -322,7 +314,6 @@ class Method extends ModuleBase {
     create() {
         this.data.create.bind(this.case)({
             store: this.store,
-            private: this.private,
             include: this.include.bind(this)
         });
         this.create = null
@@ -342,7 +333,6 @@ class Method extends ModuleBase {
     system() {
         return {
             store: this.store,
-            private: this.private,
             getGroupStore: this.getGroupStore.bind(this)
         }
     }

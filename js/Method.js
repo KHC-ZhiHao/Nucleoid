@@ -6,7 +6,6 @@ class Method extends ModuleBase {
         this.used = [];
         this.store = {};
         this.group = group;
-        this.private = {};
         this.data = this.verify(options, {
             name: [true, ''],
             create: [false, function(){}],
@@ -30,7 +29,6 @@ class Method extends ModuleBase {
     create() {
         this.data.create.bind(this.case)({
             store: this.store,
-            private: this.private,
             include: this.include.bind(this)
         });
         this.create = null
@@ -50,7 +48,6 @@ class Method extends ModuleBase {
     system() {
         return {
             store: this.store,
-            private: this.private,
             getGroupStore: this.getGroupStore.bind(this)
         }
     }
