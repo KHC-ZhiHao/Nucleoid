@@ -133,10 +133,11 @@ class CurryUnit extends ModuleBase {
                 })
             }
         }
-        this.main.data.input.bind(this.case)(this.params, {
-            include: this.include.bind(this)
-        }, reject);
-        if( stop === false ){ run() }
+        let pass = ()=>{
+            run();
+            pass = ()=>{}
+        }
+        this.main.data.input.bind(this.case)( this.params, { include: this.include.bind(this) }, reject, pass );
     }
 
 }

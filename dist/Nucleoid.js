@@ -207,10 +207,11 @@ class CurryUnit extends ModuleBase {
                 })
             }
         }
-        this.main.data.input.bind(this.case)(this.params, {
-            include: this.include.bind(this)
-        }, reject);
-        if( stop === false ){ run() }
+        let pass = ()=>{
+            run();
+            pass = ()=>{}
+        }
+        this.main.data.input.bind(this.case)( this.params, { include: this.include.bind(this) }, reject, pass );
     }
 
 }
@@ -223,14 +224,13 @@ class MethodGroup extends ModuleBase {
         this.case = new Case();
         this.pool = {};
         this.curryPool = {};
-        this.store = {};
         this.data = this.verify(options, {
             create: [false, function(){}]
         })
     }
 
     create(options){
-        this.data.create.bind(this.case)(this.store, options)
+        this.data.create.bind(this.case)(options)
         this.create = null;
     }
 
@@ -307,6 +307,9 @@ class Method extends ModuleBase {
 
     get name() { return this.data.name }
 
+    set groupCase(val) { console.log(val) }
+    get groupCase() { return this.group.case }
+
     init() {
         if( this.group == null ){
             this.systemError('init', 'No has group', this)
@@ -332,14 +335,10 @@ class Method extends ModuleBase {
         return this.group.getMethod(name).use()
     }
 
-    getGroupStore(name) {
-        return this.group.store[name]
-    }
-
     system() {
         return {
             store: this.store,
-            getGroupStore: this.getGroupStore.bind(this)
+            group: this.groupCase
         }
     }
 

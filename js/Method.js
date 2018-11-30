@@ -16,6 +16,9 @@ class Method extends ModuleBase {
 
     get name() { return this.data.name }
 
+    set groupCase(val) { console.log(val) }
+    get groupCase() { return this.group.case }
+
     init() {
         if( this.group == null ){
             this.systemError('init', 'No has group', this)
@@ -41,14 +44,10 @@ class Method extends ModuleBase {
         return this.group.getMethod(name).use()
     }
 
-    getGroupStore(name) {
-        return this.group.store[name]
-    }
-
     system() {
         return {
             store: this.store,
-            getGroupStore: this.getGroupStore.bind(this)
+            group: this.groupCase
         }
     }
 

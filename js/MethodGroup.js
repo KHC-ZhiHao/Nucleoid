@@ -6,14 +6,13 @@ class MethodGroup extends ModuleBase {
         this.case = new Case();
         this.pool = {};
         this.curryPool = {};
-        this.store = {};
         this.data = this.verify(options, {
             create: [false, function(){}]
         })
     }
 
     create(options){
-        this.data.create.bind(this.case)(this.store, options)
+        this.data.create.bind(this.case)(options)
         this.create = null;
     }
 
