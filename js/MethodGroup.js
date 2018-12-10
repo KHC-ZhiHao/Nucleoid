@@ -6,7 +6,7 @@ class MethodGroup extends ModuleBase {
         this.case = new Case();
         this.pool = {};
         this.curryPool = {};
-        this.data = this.verify(options, {
+        this.data = this.$verify(options, {
             create: [false, function(){}]
         })
     }
@@ -18,24 +18,24 @@ class MethodGroup extends ModuleBase {
 
     getMethod(name) {
         if( this.main ){
-            return MethodBucket.getMethod(name)
+            return Bioreactor.getMethod(name)
         } else {
             if( this.pool[name] ){
                 return this.pool[name]
             } else {
-                this.systemError('getMethod', 'method not found.', name)
+                this.$systemError('getMethod', 'method not found.', name)
             }
         }
     }
 
     getCurry(name) {
         if( this.main ){
-            return MethodBucket.getCurry(name)
+            return Bioreactor.getCurry(name)
         } else {
             if( this.curryPool[name] ){
                 return this.curryPool[name]
             } else {
-                this.systemError('getCurry', 'curry not found.', name)
+                this.$systemError('getCurry', 'curry not found.', name)
             }
         }
     }
@@ -50,14 +50,14 @@ class MethodGroup extends ModuleBase {
 
     currying(options){
         let curry = new Curry(options, this);
-        if( this.noKey('currying', this.curryPool, curry.name ) ){
+        if( this.$noKey('currying', this.curryPool, curry.name ) ){
             this.curryPool[curry.name] = curry
         }
     }
 
     addMethod(options) {
         let method = new Method(options, this);
-        if( this.noKey('addMethod', this.pool, method.name ) ){
+        if( this.$noKey('addMethod', this.pool, method.name ) ){
             this.pool[method.name] = method
         }
     }

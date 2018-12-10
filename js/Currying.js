@@ -3,7 +3,7 @@ class Curry extends ModuleBase {
     constructor(options, group) {
         super("Curry");
         this.group = group;
-        this.data = this.verify(options, {
+        this.data = this.$verify(options, {
             name: [true, ''],
             input: [true, function(){}],
             output: [true, function(){}],
@@ -17,7 +17,7 @@ class Curry extends ModuleBase {
     init() {
         let check = this.data.methods
         if( check.action || check.promise || check.direct ){
-            this.systemError('init', 'Methods has private key(action, promise, direct)')
+            this.$systemError('init', 'Methods has private key(action, promise, direct)')
         }
     }
 
@@ -43,14 +43,6 @@ class CurryUnit extends ModuleBase {
         this.initRegisterMethod();
     }
 
-    direct() {
-        let output = null
-        let error = function(error) { output = error }
-        let success = function(data) { output = data }
-        this.activation( error, success )
-        return output;
-    }
-
     action(callback) {
         let error = function(error){ callback(error, null) }
         let success = function(success) { callback(null, success) }
@@ -66,7 +58,6 @@ class CurryUnit extends ModuleBase {
     initRegisterMethod() {
         let self = this;
         this.registergMethod = {
-            direct: this.direct.bind(this),
             action: this.action.bind(this),
             promise: this.promise.bind(this)
         }

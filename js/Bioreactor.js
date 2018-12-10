@@ -1,7 +1,7 @@
-class Bucket extends ModuleBase {
+class BioreactorBase extends ModuleBase {
 
     constructor() {
-        super("Bucket")
+        super("Bioreactor")
         this.mainGroup = new MethodGroup( {}, true );
         this.groups = {};
     }
@@ -27,10 +27,10 @@ class Bucket extends ModuleBase {
             if( method ){
                 return method
             } else {
-                this.systemError('getMethod', 'Method not found.', split[1])
+                this.$systemError('getMethod', 'Method not found.', split[1])
             }
         } else {
-            this.systemError('getMethod', 'Group not found.', split[0])
+            this.$systemError('getMethod', 'Group not found.', split[0])
         }
     }
 
@@ -43,10 +43,10 @@ class Bucket extends ModuleBase {
             if( curry ){
                 return curry
             } else {
-                this.systemError('getCurry', 'Method not found.', split[1])
+                this.$systemError('getCurry', 'Method not found.', split[1])
             }
         } else {
-            this.systemError('getCurry', 'Group not found.', split[0])
+            this.$systemError('getCurry', 'Group not found.', split[0])
         }
     }
 
@@ -66,13 +66,13 @@ class Bucket extends ModuleBase {
                 }
                 this.groups[name] = group;
             } else {
-                this.systemError('addGroup', 'Must group.', group)
+                this.$systemError('addGroup', 'Must group.', group)
             }
         } else {
-            this.systemError('addGroup', 'Name already exists.', name);
+            this.$systemError('addGroup', 'Name already exists.', name);
         }
     }
 
 }
 
-let MethodBucket = new Bucket()
+let Bioreactor = new BioreactorBase()

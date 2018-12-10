@@ -23,61 +23,304 @@
 class ModuleBase {
 
     constructor(name){
-        this.baseName = name;
+        this.$moduleBase = { 
+            name: name || 'no name'
+        };
     }
 
     /**
-     * @function systemError(functionName,maessage,object)
+     * @function $systemError(functionName,maessage,object)
      * @desc 於console呼叫錯誤，中斷程序並顯示錯誤的物件
      */
 
-    systemError( functionName, message, object = '$_no_error' ){
+    $systemError( functionName, message, object = '$_no_error' ){
         if( object !== '$_no_error' ){
             console.log( `%c error object is : `, 'color:#FFF; background:red' );
             console.log( object );
         }
-        throw new Error( `(☉д⊙)!! Nucleoid::${this.baseName} => ${functionName} -> ${message}` );
+        throw new Error( `(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}` );
     }
 
-    noKey( functionName, target, key ) {
+    $noKey( functionName, target, key ) {
         if( target[key] == null ){
             return true;
         } else {
-            this.systemError( functionName, 'Name already exists.', key );
+            this.$systemError( functionName, 'Name already exists.', key );
             return false;
         } 
     }
 
-    verify(data, validate) {
+    $verify(data, validate, assign = {}) {
         let newData = {}
         for( let key in validate ){
             let v = validate[key];
             if( v[0] && data[key] == null ){
-                this.systemError('verify', 'Must required', key);
+                this.$systemError('verify', 'Must required', key);
                 return;
             }
             if( data[key] ){
-                if( typeof v[1] === typeof data[key] ){
+                if( typeof v[1] === (typeof data[key] === 'string' && data[key][0] === "#") ? data[key].slice(1) : 'string' ){
                     newData[key] = data[key];
                 } else {
-                    this.systemError('verify', `Type(${typeof v[1]}) error`, key);
+                    this.$systemError('verify', `Type(${typeof v[1]}) error`, key);
                 }
             } else {
                 newData[key] = v[1];
             }
         }
-        return newData;
+        return Object.assign(newData, assign);
+    }
+
+    $protection(object, key, getter, value) {
+        getter[key] = value
+        Object.defineProperty( object, key, {
+            set: ()=>{
+                this.$systemError('protection', "This key is a private key, can't be change.", key );
+            },
+            get: ()=>{
+                return getter[key];
+            },
+        })
     }
 
 }
 
 class Case {}
+class Root extends ModuleBase {
+
+    constructor(name) {
+        super("Root")
+        this.name = name
+        this.delay = 10
+        this.startTime = 0
+        this.operating = typeof window === 'undefined' ? 'node' : 'browser'
+        this.pollingEvents = []
+    }
+
+    get operationTime() {
+        return Date.now() - this.startTime
+    }
+
+    install() {
+        this.status = new Status(this, null, this.name, 'root')
+        this.startTime = Date.now()
+        this.initPolling()
+    }
+
+    initPolling() {
+        this.interval = setInterval(() => {
+            let clear = false
+            for (let i = 0; i < this.pollingEvents.length; i++) {
+                let event = this.pollingEvents[i]
+                if (event.finish) {
+                    clear = true
+                } else {
+                    event.activate()
+                }
+            }
+            if (clear) {
+                this.filterPollingEvents()
+            }
+        }, this.delay)
+    }
+
+    polling(options, status) {
+        this.pollingEvents.push(new PollingEvent(this, status || this.status, options))
+    }
+
+    clearPollingEvents() {
+        this.pollingEvents = this.pollingEvents.filter((d) => {
+            return d.finish === false
+        })
+    }
+
+    createFragment(name, status) {
+        let fragment = new Fragment(this, status || this.status, name)
+        return fragment.use()
+    }
+
+    bindFragment(status) {
+        return (name) => {
+            return this.createFragment(name, status)
+        }
+    }
+
+    bindPolling(status) {
+        return (options) => {
+            return this.polling(options, status)
+        }
+    }
+
+    close() {
+        clearInterval(this.interval)
+    }
+
+}
+
+class PollingEvent extends ModuleBase {
+
+    constructor(root, status, options) {
+        super('PollingEvent')
+        this.status = new Status(root, status, options.name, 'polling')
+        this.action = options.action
+        this.finish = false
+    }
+
+    activate() {
+        this.action(this.close.bind(this))
+    }
+
+    close() {
+        this.finish = true
+        this.status.set(true)
+    }
+
+}
+
+class Fragment extends ModuleBase {
+
+    constructor(root, status, name) {
+        super('Fragment')
+        this.root = root
+        this.over = 0
+        this.name = name || 'no name'
+        this.stop = false
+        this.thread = []
+        this.status = new Status(this.root, status, this.name, 'fragment')
+    }
+
+    install(callback) {
+        this.callback = callback
+    }
+
+    use() {
+        return {
+            add: this.add.bind(this),
+            activate: this.activate.bind(this)
+        }
+    }
+
+    add(options) {
+        this.thread.push(this.$verify(options, {
+            name: [true, '#string'],
+            action: [true, '#function'] 
+        }))
+    }
+
+    regsterError(status) {
+        return (error) => {
+            status.set(false, error)
+            if( this.stop === false ){
+                this.stop = true
+                this.status.set(false, error)
+                this.callback(error)
+            }
+        }
+    }
+
+    regsterOnload(status) {
+        return () => {
+            status.set(true)
+            this.over += 1
+            if( this.stop === false ){
+                if( this.over >= this.thread.length ){
+                    this.stop = true
+                    this.status.set(true)
+                    this.callback()
+                }
+            }
+        }
+    }
+
+    actionThread(thread) {
+        let func = async() => {
+            let status = new Status(this.root, this.status, thread.name, 'fragment-base')
+            let onload = this.regsterOnload(status)
+            let error = this.regsterError(status)
+            thread.action(error, onload)
+        }
+        func()
+    }
+
+    activate(callback) {
+        let length = this.thread.length
+        this.install(callback)
+        for (let i = 0; i < length; i++) {
+            this.actionThread(this.thread[i])
+        }
+        if( length === 0 ){
+            this.callback(null)
+        }
+        this.activate = () => {
+            this.$systemError('activate', `This template(${this.name}) already  called`)
+        }
+    }
+
+}
+
+class Status extends ModuleBase{
+
+    constructor(root, parent, name, type) {
+        super("Status")
+        this.root = root || null
+        this.name = name || 'no name'
+        this.type = type || 'no type'
+        this.parent = parent
+        this.message = ''
+        this.success = false
+        this.children = []
+        this.attributes = {}
+        this.operationTime = 0
+        if (this.parent) {
+            this.parent.addChildren(this)
+        }
+    }
+
+    add(name, message = null) {
+        this.attributes[name] = message || ''
+    }
+
+    set(success, message) {
+        this.success = success
+        this.message = message || ''
+        this.operationTime = this.root.operationTime
+    }
+
+    get() {
+        let data = {
+            name: this.name,
+            type: this.type,
+            message: this.message,
+            success: this.success,
+            attributes: this.attributes,
+            children: [],
+            operationTime: this.operationTime
+        }
+        for (let child of this.children) {
+            data.children.push(child.get())
+        }
+        return data
+    }
+
+    json() {
+        return JSON.stringify(this.get(), null, 4)
+    }
+
+    addChildren(status) {
+        if (status instanceof Status) {
+            this.children.push(status)
+        } else {
+            this.$systemError('addChildren', 'Child not a status class.', status)
+        }
+    }
+
+}
 class Curry extends ModuleBase {
 
     constructor(options, group) {
         super("Curry");
         this.group = group;
-        this.data = this.verify(options, {
+        this.data = this.$verify(options, {
             name: [true, ''],
             input: [true, function(){}],
             output: [true, function(){}],
@@ -91,7 +334,7 @@ class Curry extends ModuleBase {
     init() {
         let check = this.data.methods
         if( check.action || check.promise || check.direct ){
-            this.systemError('init', 'Methods has private key(action, promise, direct)')
+            this.$systemError('init', 'Methods has private key(action, promise, direct)')
         }
     }
 
@@ -117,14 +360,6 @@ class CurryUnit extends ModuleBase {
         this.initRegisterMethod();
     }
 
-    direct() {
-        let output = null
-        let error = function(error) { output = error }
-        let success = function(data) { output = data }
-        this.activation( error, success )
-        return output;
-    }
-
     action(callback) {
         let error = function(error){ callback(error, null) }
         let success = function(success) { callback(null, success) }
@@ -140,7 +375,6 @@ class CurryUnit extends ModuleBase {
     initRegisterMethod() {
         let self = this;
         this.registergMethod = {
-            direct: this.direct.bind(this),
             action: this.action.bind(this),
             promise: this.promise.bind(this)
         }
@@ -224,7 +458,7 @@ class MethodGroup extends ModuleBase {
         this.case = new Case();
         this.pool = {};
         this.curryPool = {};
-        this.data = this.verify(options, {
+        this.data = this.$verify(options, {
             create: [false, function(){}]
         })
     }
@@ -236,24 +470,24 @@ class MethodGroup extends ModuleBase {
 
     getMethod(name) {
         if( this.main ){
-            return MethodBucket.getMethod(name)
+            return Bioreactor.getMethod(name)
         } else {
             if( this.pool[name] ){
                 return this.pool[name]
             } else {
-                this.systemError('getMethod', 'method not found.', name)
+                this.$systemError('getMethod', 'method not found.', name)
             }
         }
     }
 
     getCurry(name) {
         if( this.main ){
-            return MethodBucket.getCurry(name)
+            return Bioreactor.getCurry(name)
         } else {
             if( this.curryPool[name] ){
                 return this.curryPool[name]
             } else {
-                this.systemError('getCurry', 'curry not found.', name)
+                this.$systemError('getCurry', 'curry not found.', name)
             }
         }
     }
@@ -268,14 +502,14 @@ class MethodGroup extends ModuleBase {
 
     currying(options){
         let curry = new Curry(options, this);
-        if( this.noKey('currying', this.curryPool, curry.name ) ){
+        if( this.$noKey('currying', this.curryPool, curry.name ) ){
             this.curryPool[curry.name] = curry
         }
     }
 
     addMethod(options) {
         let method = new Method(options, this);
-        if( this.noKey('addMethod', this.pool, method.name ) ){
+        if( this.$noKey('addMethod', this.pool, method.name ) ){
             this.pool[method.name] = method
         }
     }
@@ -291,62 +525,65 @@ class MethodGroup extends ModuleBase {
 }
 class Method extends ModuleBase {
     
-    constructor( options = {}, group ) {
+    constructor(options = {}, group) {
         super('Method');
         this.case = new Case()
-        this.used = [];
         this.store = {};
         this.group = group;
-        this.data = this.verify(options, {
-            name: [true, ''],
-            create: [false, function(){}],
-            action: [true, function(){}]
+        this.data = this.$verify( options, {
+            name : [true , ''],
+            create : [false, function(){}],
+            action : [true , function(){}],
+            allowDirect : [false , true]
         })
-        this.init();
+        if( this.group == null ){
+            this.$systemError('init', 'No has group', this)
+        }
+        if( this.name.includes('-') ){
+            this.$systemError('init', 'Symbol - is group protection.', name)
+        }
     }
 
     get name() { return this.data.name }
-
-    set groupCase(val) { console.log(val) }
     get groupCase() { return this.group.case }
 
-    init() {
-        if( this.group == null ){
-            this.systemError('init', 'No has group', this)
-        }
-        if( this.name.includes('-') ){
-            this.systemError('init', 'Symbol - is group protection.', name)
-        }
-        this.case = new Case()
+    install() {
+        this.initBindData()
+        this.data.create.bind(this.case)(this.bind.create)
+        this.install = null
     }
 
-    create() {
-        this.data.create.bind(this.case)({
-            store: this.store,
-            include: this.include.bind(this)
-        });
-        this.create = null
+    initBindData() {
+        this.bind = {
+            create: {
+                store: this.store,
+                include: this.include.bind(this),
+            },
+            system: {
+                store: this.store,
+                group: this.groupCase,
+                include: this.include.bind(this),
+            },
+            action: this.data.action.bind(this.case)
+        }
     }
 
     include(name) {
-        if( this.used.includes(name) === false ){
-            this.used.push(name)
-        }
         return this.group.getMethod(name).use()
     }
 
-    system() {
-        return {
-            store: this.store,
-            group: this.groupCase
-        }
-    }
-
     direct(params){
+        if (this.data.allowDirect === false) {
+            this.$systemError('direct', 'Not allow direct.', this.data.name)
+        }
         let output = null
-        let success = function(data) { output = data }
-        let error = function(error) { output = error }
-        this.data.action.bind(this.case)( params, this.system(), error, success );
+        let error = function(error) {
+            throw new Error(error)
+        }
+        let success = function(data) {
+            output = data
+        }
+        this.bind.action(params, this.bind.system, error, success);
         return output
     }
 
@@ -357,12 +594,12 @@ class Method extends ModuleBase {
         let success = function(success) {
             callback(null, success);
         }
-        this.data.action.bind(this.case)( params, this.system(), error, success );
+        this.bind.action(params, this.bind.system, error, success);
     }
 
     promise(params) {
         return new Promise(( resolve, reject )=>{
-            this.data.action.bind(this.case)( params, this.system(), reject, resolve );
+            this.bind.action(params, this.bind.system, resolve, reject);
         })
     }
 
@@ -370,13 +607,13 @@ class Method extends ModuleBase {
         if( this.store[key] ){
             return this.store[key]
         } else {
-            this.systemError('getStore', 'Key not found.', key)
+            this.$systemError('getStore', 'Key not found.', key)
         }
     }
 
     use() {
-        if( this.create ){ 
-            this.create()
+        if( this.install ){ 
+            this.install()
         }
         return {
             store: this.getStore.bind(this),
@@ -388,10 +625,169 @@ class Method extends ModuleBase {
 
 }
 
-class Bucket extends ModuleBase {
+class Gene extends ModuleBase {
+
+    constructor(name){
+        super("Gene");
+        this.setName(name || 'no name');
+        this.root = new Root(this.name)
+        this.templates = []
+        this.polymerase = {
+            messenger: {},
+            protection : {}
+        }
+        this.mode = {
+            timeout: null,
+            catchException: null,
+            catchUncaughtException: null
+        }
+        this.synthesis = {
+            initiation: null,
+            elongation: null,
+            termination: null
+        }
+    }
+
+    /**
+     * @function setName(name)
+     * @desc 設定名稱
+     */
+
+    setName(name){
+        if( typeof name === "string" ){
+            this.name = name;
+        } else {
+            this.$systemError( 'setName', 'Name not a string.', name );
+        }
+    }
+
+    /** 
+     * @function setTimeoutMode(enable,millisecond,action)
+     * @desc 設定逾時事件
+     */
+
+    setTimeoutMode(enable, millisecond, action) {
+        if (enable && typeof millisecond === "number" && typeof action === "function") {
+            this.mode.timeout = { action, millisecond }
+        } else {
+            this.$systemError( 'setTimeout', 'Params type error. try setTimeoutMode(boolean, number, function)' );
+        }
+    }
+
+    /** 
+     * @function setCatchExceptionMode(enable,action)
+     * @desc 設定捕捉Exception模式
+     */
+
+    setCatchExceptionMode( enable, action ){
+        if( enable && typeof action === "function" ){
+            this.mode.catchException = { action }
+        } else {
+            this.$systemError('setCatchExceptionMode', 'Params type error, try setCatchExceptionMode(boolean, function).')
+        }
+    }
+
+    /**
+     * @function setCatchUncaughtException(enable,action)
+     * @desc 設定捕捉未捕獲Exception模式
+     */
+
+    setCatchUncaughtException( enable, action ) {
+        if( enable && typeof action === "function" ){
+            this.mode.catchUncaughtException = { action }
+        }else{
+            this.$systemError('setCatchUncaughtException', 'Params type error, try setCatchUncaughtException(boolean, function).')
+        }
+    }
+
+    /**
+     * @function addMessenger(key,value)
+     * @desc 加入一個全域屬性
+     */
+
+    addMessenger( key, value ){
+        if( this.polymerase.messenger[key] == null ){
+            if( key.slice(0, 1) === "$" ){
+                this.$protection(this.polymerase.messenger, key, this.polymerase.protection, value)
+            } else {
+                this.polymerase.messenger[key] = value
+            }
+        } else {
+            this.$systemError('addMessenger', 'Messenger key already exists.', key );
+        }
+    }
+
+    /**
+     * @function template(name,action)
+     * @desc 加入一個貯列模板
+     */
+
+    template( name, action ) {
+        if( typeof name === 'string' && typeof action === 'function' ){
+            this.templates.push({ name, action })
+        } else {
+            this.$systemError( 'template', 'Params type error, try template(string, function).' );
+        }
+    }
+
+    /** 
+     * @function setInitiation(initiation)
+     * @desc 設定啟動事件
+     */
+
+    setInitiation(initiation) {
+        if( typeof initiation === 'function' ){
+            this.synthesis.initiation = initiation
+        }else{
+            this.$systemError('setInitiation', 'Params type error, try setInitiation(function).' )
+        }
+    }
+
+    /** 
+     * @function setElongation(elongation)
+     * @desc 設定延長事件
+     */
+
+    setElongation(elongation) {
+        if( typeof elongation === 'function' ){
+            this.synthesis.elongation = elongation
+        }else{
+            this.$systemError('setElongation', 'Params type error, try setElongation(function).' )
+        }
+    }
+
+    /** 
+     * @function setTermination(termination)
+     * @desc 設定結束事件
+     */
+
+    setTermination(termination) {
+        if( typeof termination === 'function' ){
+            this.synthesis.termination = termination
+        }else{
+            this.$systemError('setTermination', 'Params type error, try setTermination(function).' );
+        }
+    }
+
+    /** 
+     * @function translation()
+     * @desc 執行系統
+     * @returns {Promise}
+     */
+
+    translation() {
+        return new Promise((resolve, reject) => {
+            this.root.install()
+            new Translation(this, resolve, reject)
+        })
+    }
+
+}
+
+class BioreactorBase extends ModuleBase {
 
     constructor() {
-        super("Bucket")
+        super("Bioreactor")
         this.mainGroup = new MethodGroup( {}, true );
         this.groups = {};
     }
@@ -417,10 +813,10 @@ class Bucket extends ModuleBase {
             if( method ){
                 return method
             } else {
-                this.systemError('getMethod', 'Method not found.', split[1])
+                this.$systemError('getMethod', 'Method not found.', split[1])
             }
         } else {
-            this.systemError('getMethod', 'Group not found.', split[0])
+            this.$systemError('getMethod', 'Group not found.', split[0])
         }
     }
 
@@ -433,10 +829,10 @@ class Bucket extends ModuleBase {
             if( curry ){
                 return curry
             } else {
-                this.systemError('getCurry', 'Method not found.', split[1])
+                this.$systemError('getCurry', 'Method not found.', split[1])
             }
         } else {
-            this.systemError('getCurry', 'Group not found.', split[0])
+            this.$systemError('getCurry', 'Group not found.', split[0])
         }
     }
 
@@ -456,314 +852,165 @@ class Bucket extends ModuleBase {
                 }
                 this.groups[name] = group;
             } else {
-                this.systemError('addGroup', 'Must group.', group)
+                this.$systemError('addGroup', 'Must group.', group)
             }
         } else {
-            this.systemError('addGroup', 'Name already exists.', name);
+            this.$systemError('addGroup', 'Name already exists.', name);
         }
     }
 
 }
 
-let MethodBucket = new Bucket()
+let Bioreactor = new BioreactorBase()
 
 /**
- * @class Transcription(nucleoid,callback)
- * @desc 轉錄nucleoid並輸出messenger，他會在運行Nucleoid Transcription實例化，保護其不被更改到
+ * @class Translation(gene)
+ * @desc 轉譯gene並輸出messenger，他會在運行Gene Translation實例化，保護其不被更改到
  */
 
-class Transcription extends ModuleBase {
+class Translation extends ModuleBase {
 
-    constructor( nucleoid, callback, reject ){
-        super("Transcription");
-        this.name = "";
-        this.used = [];
-        this.start = Date.now();
-        this.stack = [];
-        this.fail = null;
-        this.finish = false;
-        this.reject = reject;
-        this.operating = typeof window === 'undefined' ? 'node' : 'browser';
-        this.runIndex = 0;
-        this.callback = callback;
-        this.nucleoid = nucleoid;
-        this.targetStack = null;
-        this.initTimeOut();
-        this.initGenerator();
-        this.initUncaughtException();
-        this.validateNucleoid();
+    constructor(gene, resolve, reject){
+        super("Translation");
+        this.case = new Case()
+        this.gene = gene
+        this.root = gene.root
+        this.status = this.root.status
+        this.finish = false
+        this.reject = reject
+        this.resolve = resolve
+        this.templates = this.gene.templates
+        this.messenger = this.gene.polymerase.messenger
+        this.bioreactor = Bioreactor
+        this.init()
+        this.synthesis()
     }
 
-    getSystem() {
-        return {
-            fail: this.callFail.bind(this),
+    init() {
+        this.initBind()
+        this.initTimeoutMode()
+        this.initGenerator()
+        this.initCatchUncaughtExceptionMode()
+    }
+
+    initBind() {
+        this.bind = {
+            exit: this.exit.bind(this),
+            fail: this.fail.bind(this),
+            next: this.next.bind(this),
             mixin: this.mixin.bind(this),
             curry: this.curry.bind(this),
-            methods: this.methods.bind(this),
-            template: this.template.bind(this)
+            methods: this.methods.bind(this)
         }
     }
 
-    template({thread, error, finish}) {
-        let over = 0;
-        let uning = 0;
-        let threadList = [];
-        let regster = async function({name, action}){
-            uning += 1;
-            threadList.push({
-                name, 
-                action,
-                stop: false
-            });
-        }
-        let regsterOnload = (thread)=>{
-            return ()=>{
-                over += 1;
-                if( thread.stop === false ){
-                    thread.stop = true;
-                    this.addStackExtra( 'template', { name : thread.name, success : true } );
-                }
-                if( over >= uning ){
-                    finish();
+    initTimeoutMode() {
+        if (this.gene.mode.timeout) {
+            let system = this.gene.mode.timeout
+            let params = {
+                name: 'timeout',
+                action: (finish) => {
+                    if (this.root.operationTime > system.millisecond) {
+                        this.status.add('timeout')
+                        system.action.bind(this.case)(this.messenger, this.bind.exit, this.bind.fail)
+                        finish()
+                    }
                 }
             }
-        }
-        let regsterError = (thread)=>{
-            return (e)=>{
-                if( thread.stop === false ){
-                    thread.stop = true;
-                    this.addStackExtra( 'template', { name : thread.name, success : false } );
-                    error(e);
-                }
-            }
-        }
-        thread(regster);
-        for( let i = 0; i < threadList.length; i++ ){
-            threadList[i].action( regsterOnload(threadList[i]), regsterError(threadList[i]));
-        }
-        if( threadList.length === 0 ){
-            finish();
+            this.root.polling(params)
         }
     }
-    
+
+    /**
+     * @function initCatchUncaughtExceptionMode
+     * @desc 初始化捕捉異步錯誤
+     */
+
+    initCatchUncaughtExceptionMode(){
+        if( this.gene.mode.catchUncaughtException ){
+            this.uncaughtExceptionAction = (error) => {
+                let exception = error.stack ? error : error.error
+                this.status.add('uncaughtException', exception.message);
+                this.gene.mode.catchUncaughtException.action.bind(this.case)(this.messenger, exception, this.bind.exit, this.bind.fail)
+            }
+            if( this.root.operating === 'node' ){
+                this.uncaughtExceptionDomain = require('domain').create();
+                this.uncaughtExceptionDomain.on('error', this.uncaughtExceptionAction);
+            }else{
+                window.addEventListener('error', this.uncaughtExceptionAction);
+            }
+        }
+    }
+
+    initGenerator(){
+        let self = this
+        let generator = function * (){
+            let index = 0
+            let template = self.templates[0]
+            if( self.gene.synthesis.initiation ){
+                self.gene.synthesis.initiation.bind(self.case)(self.messenger, self.bind.exit, self.bind.fail)
+            }
+            while( index <= 10000 ){
+                if( self.finish ){
+                    break;
+                } else {
+                    if( template == null ){
+                        self.bind.exit()
+                    } else {
+                        let status = new Status(self.root, self.status, template.name, 'template')
+                        let next = () => {
+                            next = null
+                            status.set(true)
+                            template = self.templates[index++]
+                            self.bind.next()
+                        }
+                        template.action.bind(self.case)(self.messenger, self.getSkill(status), next, self.bind.exit, self.bind.fail)
+                    }
+                }
+                yield;
+            }
+            return;
+        }
+        this.iterator = generator();
+    }
+
+    getSkill(status) {
+        return {
+            mixin: this.bind.mixin,
+            curry: this.bind.curry,
+            methods: this.bind.methods,
+            polling: this.root.bindPolling(status),
+            createFragment: this.root.bindFragment(status)
+        }
+    }
+
     /**
      * @function method()
      * @desc 獲取使用的模塊
      */
 
     methods(name){
-        let method = MethodBucket.getMethod(name).use();
-        this.addStackExtra('used', {
-            name : name,
-            used : MethodBucket.getMethod(name).used
-        });
-        return method;
+        return this.bioreactor.getMethod(name).use();
     }
 
     curry(name){
-        let curry = MethodBucket.getCurry(name).use();
-        this.addStackExtra('curry', {
-            name : name
-        });
-        return curry;
+        return this.bioreactor.getCurry(name).use();
     }
 
-    mixin(nucleoid, callback) {
-        if (nucleoid instanceof Nucleoid) {
-            nucleoid.transcription().then((result)=>{
-                this.addStackExtra( 'mixin', result.status );
+    mixin(gene, callback) {
+        if (gene instanceof Gene) {
+            gene.translation().then((result) => {
+                this.status.addChildren(status)
                 callback(null, result.messenger)
             }, (error) => {
-                this.addStackExtra( 'mixin', error.status );
-                callback(error, null)
+                this.status.addChildren(error.status)
+                callback({
+                    error: error.error,
+                    messenger: error.messenger
+                }, null)
             })
         } else {
-            this.systemError('mixin', 'Target not a nucleoid module.', nucleoid)
-        }
-    }
-
-    callFail(error) {
-        this.fail = true
-        this.reject({
-            error,
-            messenger: this.nucleoid.messenger,
-            status: this.createStatus()
-        })
-    }
-
-    /**
-     * @member {numbre} 當前時間
-     */
-
-    get now(){
-        return Date.now() - this.start;
-    }
-
-    /**
-     * @function validateNucleoid()
-     * @desc 驗證Nucleoid的結構是否正確，是開始運行
-     */
-
-    validateNucleoid(){
-        if( this.validate() ){
-            this.name = this.nucleoid.name;
-            this.doNext();
-        }
-    }
-
-    /**
-     * @function validate()
-     * @desc 驗證Nucleoid過程
-     */
-
-    validate(){
-        let template = {
-            name : [true, 'string'],
-            tryCatchMode : [true, 'boolean'],
-            tryCatchModeAction : [false, 'function'],
-            timeout : [false, 'number'],
-            timeoutAction : [false, 'function'],
-            promoter : [false, 'function'],
-            messenger : [true, 'object'],
-            mediator : [false, 'function'],
-            terminator : [false, 'function'],
-            uncaughtException: [true, 'boolean'],
-            uncaughtExceptionAction: [false, 'function']
-        }
-        //cycle
-        for( let key in template ){
-            let target = this.nucleoid[key];
-            if( template[key][0] && target == null ){
-                this.systemError( 'validateNucleoid', `Data ${key} must required.`, target );
-                return false;
-            }
-            if( target !== null && template[key][1] !== typeof target ){
-                this.systemError( 'validateNucleoid', `Data type must ${template[key][1]}.`, target );
-                return false;
-            }
-        }
-        //gene
-        if( Array.isArray(this.nucleoid.queues) === false ){
-            this.systemError( 'validateNucleoid', `Data type must array.`, this.nucleoid.queues );
-            return false;
-        }
-        for( let i = 0; i < this.nucleoid.queues.length; i++ ){
-            let target = this.nucleoid.queues[i]
-            if( typeof target.name !== "string" || typeof target.action !== "function" ){
-                this.systemError( 'validateNucleoid', `Queues type Incorrect.`, target );
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * @function addStack(step,desc)
-     * @desc 加入一個堆棧追蹤
-     * @param {string} step 堆棧名稱 
-     */
-
-    addStack( step, desc ){
-        let stack = {
-            step : step,
-            start : this.now,
-        }
-        if( desc ){
-            stack.desc = desc
-        }
-        this.stack.push(stack)
-        return stack
-    }
-
-    addStackExtra( name, extra ){
-        if( this.targetStack ){
-            if( this.targetStack[name] == null ){
-                this.targetStack[name] = [];
-            }
-            this.targetStack[name].push(extra);
-        }
-    }
-
-    /**
-     * @function initGenerator()
-     * @desc 初始化Generator
-     */
-
-    initGenerator(){
-        let max = 10000;
-        let self = this;
-        let exit = this.exit.bind(this);
-        let generator = function * (){
-            if( self.nucleoid.timeoutAction && self.nucleoid.timeout ){
-                self.timeout = setTimeout( self.timeoutEvent, self.nucleoid.timeout )
-            }
-            if( self.nucleoid.promoter ){
-                self.addStack('promoter');
-                self.nucleoid.promoter( self.nucleoid.messenger, exit );
-            }
-            while( max >= 0 ){
-                if( self.finish ){
-                    break;
-                } else {
-                    if( self.nucleoid.queues[self.runIndex] == null ){
-                        self.addStack('finish');
-                        exit();
-                    } else {
-                        let next = self.next.bind(self);
-                        self.targetStack = self.addStack( 'queue', self.nucleoid.queues[self.runIndex].name );
-                        self.nucleoid.queues[self.runIndex].action( self.nucleoid.messenger, self.getSystem(), ()=>{
-                            if( next ){ 
-                                next();
-                                next = null;
-                            } else {
-                                console.warn(`Nucleoid(${self.nucleoid.name}) => Next already called.`)
-                            }
-                        })
-                        self.runIndex += 1;
-                    }
-                }
-                max--
-                yield;
-            }
-            return;
-        }
-        this.runtime = generator();
-    }
-
-    /**
-     * @function initUncaughtException
-     * @desc 初始化捕捉異步錯誤
-     */
-
-    initUncaughtException(){
-        if( this.nucleoid.uncaughtException ){
-            let error = (error) => {
-                let exception = error.stack ? error : error.error
-                this.addStack('uncaught exception', error.stack ? exception.message : exception.message);
-                this.nucleoid.uncaughtExceptionAction( this.nucleoid.messenger, exception, this.callFail.bind(this) )
-                this.exit()
-            }
-            this.uncaughtExceptionError = error.bind(this)
-            if( this.operating === 'node' ){
-                this.uncaughtExceptionDomain = require('domain').create();
-                this.uncaughtExceptionDomain.on('error', this.uncaughtExceptionError);
-            }else{
-                window.addEventListener('error', this.uncaughtExceptionError);
-            }
-        }
-    }
-
-    /**
-     * @function initTimeOut()
-     * @desc 初始化Timeout事件與now時間追蹤
-     */
-
-    initTimeOut(){
-        this.timeout = null;
-        this.timeoutEvent = ()=>{
-            this.addStack('timeout');
-            this.nucleoid.timeoutAction(this.nucleoid.messenger, this.callFail.bind(this));
-            this.exit();
+            this.$systemError('mixin', 'Target not a gene module.', gene)
         }
     }
 
@@ -774,61 +1021,61 @@ class Transcription extends ModuleBase {
 
     getMode(){
         let mode = [];
-        if( this.nucleoid.tryCatchMode ){
-            mode.push('try-catch-mode');
+        if (this.gene.mode.catchException) {
+            mode.push('try-catch-mode')
         }
-        if( this.nucleoid.timeoutAction ){
-            mode.push('timeout');
+        if (this.gene.mode.timeout) {
+            mode.push('timeout')
         }
-        if( this.nucleoid.uncaughtException ){
-            mode.push('uncaught-exception-mode');
-        }
-        if( this.fail ){
-            mode.push('fail');
+        if (this.gene.mode.catchUncaughtException) {
+            mode.push('uncaught-exception-mode')
         }
         return mode
     }
 
+    close() {
+        this.status.add('mode', this.getMode())
+        this.root.close()
+        if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
+            window.removeEventListener('error', this.uncaughtExceptionAction)
+        }
+        if (this.gene.synthesis.termination) {
+            this.gene.synthesis.termination.bind(this.case)(this.messenger, this.status);
+        }
+    }
+
     /**
-     * @function createStatus()
-     * @desc 建立狀態
+     * @function fail(error)
+     * @desc 拒絕並傳遞錯誤
      */
 
-    createStatus(){
-        return {
-            name : this.name,
-            mode : this.getMode(),
-            step : this.stack.slice(-1)[0].step,
-            stack : this.stack,
-            totalRunTime : this.now
+    fail(error) {
+        if (this.finish === false) {
+            this.finish = true
+            this.status.set(false, error)
+            this.close()
+            this.reject({
+                error,
+                status: this.status,
+                messenger: this.messenger
+            })
         }
     }
 
     /**
      * @function exit()
-     * @desc 跳出貯列
+     * @desc 成功並結束模板
      */
 
     exit(){
-        if( this.finish == false ){
-            this.finish = true;
-            if( this.timeout ){
-                clearTimeout(this.timeout);
-                this.timeout = null;
-            }
-            if( this.nucleoid.uncaughtException && this.operating !== 'node' ){
-                window.removeEventListener('error', this.uncaughtExceptionAction)
-            }
-            let status = this.createStatus();
-            if( this.nucleoid.terminator ){
-                this.nucleoid.terminator(this.nucleoid.messenger, status);
-            }
-            this.callback({
-                status : status,
-                messenger : this.nucleoid.messenger,
+        if (this.finish === false) {
+            this.finish = true
+            this.status.set(true)
+            this.close()
+            this.resolve({
+                status: this.status,
+                messenger : this.messenger
             });
-        } else {
-            console.warn(`Nucleoid(${this.nucleoid.name}) => Exit already called.`)
         }
     }
 
@@ -838,281 +1085,93 @@ class Transcription extends ModuleBase {
      */
 
     next(){
-        if( this.finish === false ){
-            if( this.nucleoid.mediator ){
-                this.addStack('mediator');
-                this.nucleoid.mediator( this.nucleoid.messenger, this.exit.bind(this), this.callFail.bind(this) )
+        if (this.finish === false) {
+            if( this.gene.synthesis.elongation ){
+                this.gene.synthesis.elongation( this.messenger, this.bind.exit, this.bind.fail )
             }
             setTimeout(()=>{
-                this.doNext();
+                this.synthesis();
             }, 1)
         }
     }
 
-    doNext(){
-        this.actionTryCatchMode()
+    synthesis(){
+        this.synthesisTryCatchMode()
     }
 
-    actionTryCatchMode(){
-        if( this.nucleoid.tryCatchMode ){
+    synthesisTryCatchMode(){
+        if( this.gene.mode.catchException ){
             try{
-                this.actionUncaughtException();
+                this.synthesisCatchUncaughtExceptionMode()
             } catch (exception) {
-                if( this.nucleoid.tryCatchModeAction ){
-                    this.nucleoid.tryCatchModeAction( this.nucleoid.messenger, exception, this.callFail.bind(this) )
+                this.status.add('catch', exception.message)
+                if (this.gene.mode.catchException) {
+                    this.gene.mode.catchException.action.bind(this.case)(this.messenger, exception, this.bind.exit, this.bind.fail)
                 }
-                this.addStack('catch', exception.message);
-                this.exit();
+                return false
             }
         } else {
-            this.actionUncaughtException();
+            this.synthesisCatchUncaughtExceptionMode()
         }
     }
 
-    actionUncaughtException(){
-        if( this.nucleoid.uncaughtException && this.operating === "node" ){
+    synthesisCatchUncaughtExceptionMode(){
+        if( this.gene.mode.catchUncaughtException && this.root.operating === "node" ){
             this.uncaughtExceptionDomain.run(() => {
-                this.runtime.next();
+                this.iterator.next();
             });
         } else {
-            this.runtime.next();
+            this.iterator.next();
         }
     }
 
 }
+
 /**
  * @class Nucleoid()
  * @desc 核心
  */
 
-class Nucleoid extends ModuleBase {
-
-    /**
-     * @member {object} _protection 保護變數，他不會被外部的變數給覆蓋到
-     */
-
-    constructor(){
-        super("Nucleoid");
-        this.queues = [];
-        this.tryCatchMode = false;
-        this.tryCatchModeAction = null;
-        this.timeout = 3600;
-        this.timeoutAction = null;
-        this.uncaughtException = false;
-        this.uncaughtExceptionAction = null;
-        this.promoter = null;
-        this.mediator = null;
-        this.terminator = null;
-        this.messenger = {};
-        this._protection = {};
-        this.setName('No name');
-    }
+class Nucleoid {
 
     static addGroup( groupName, group, options ) {
-        MethodBucket.addGroup( groupName, group, options );
+        Bioreactor.addGroup( groupName, group, options );
     }
 
     static addMethod(options) {
-        MethodBucket.addMethod(options)
+        Bioreactor.addMethod(options)
     }
 
     static currying(options) {
-        MethodBucket.currying(options)
+        Bioreactor.currying(options)
     }
 
     static hasCurry(name) {
-        return MethodBucket.hasCurry(name)
+        return Bioreactor.hasCurry(name)
     }
 
     static hasMethod(name) {
-        return MethodBucket.hasMethod(name)
+        return Bioreactor.hasMethod(name)
     }
 
     static hasGroup(name) {
-        return MethodBucket.hasGroup(name)
+        return Bioreactor.hasGroup(name)
     }
 
     static callMethod(name) {
-        return MethodBucket.getMethod(name).use()
+        return Bioreactor.getMethod(name).use()
     }
 
     static callCurry(name) {
-        return MethodBucket.getCurry(name).use()
+        return Bioreactor.getCurry(name).use()
     }
 
     static createMethodGroup(options) {
         return new MethodGroup(options)
     }
 
-    /**
-     * @function setName(name)
-     * @desc 設定名稱
-     */
-
-    setName(name){
-        if( typeof name === "string" ){
-            this.name = name;
-        } else {
-            this.systemError( 'setName', 'Name not a string.', name );
-        }
-    }
-
-    /** 
-     * @function setTimeout(time,error)
-     * @desc 設定逾時事件
-     */
-
-    setTimeout( timeout, error ){
-        if( typeof timeout === "number" && typeof error === "function" ){
-            this.timeout = timeout;
-            this.timeoutAction = error;
-        } else {
-            this.systemError( 'setTimeout', 'Params type error. try setTimeout(number, function)' );
-        }
-    }
-
-    /** 
-     * @function setTrymode(enable,error)
-     * @desc 設定try-catch模式
-     */
-
-    setTrymode( enable, error ){
-        if( typeof enable === "boolean" && ( typeof error === "function" || error == null ) ){
-            this.tryCatchMode = enable;
-            this.tryCatchModeAction = error;
-        } else {
-            this.systemError( 'setTrymode', 'Params type error, try setTrymode(boolean, function).' );
-        }
-    }
-
-    /**
-     * @function setUncaughtException(enable,uncaughtException)
-     * @desc 設定未捕獲模式
-     */
-
-    setUncaughtException( enable, uncaughtException ) {
-        if( typeof enable === "boolean" && typeof uncaughtException === "function" ){
-            if( this.uncaughtExceptionAction == null ){
-                this.uncaughtException = enable
-                this.uncaughtExceptionAction = uncaughtException;
-            } else {
-                this.systemError('setUncaughtException', 'Uncaught Exception already exists.', this.uncaughtExceptionAction );
-            }
-        }else{
-            this.systemError('setUncaughtException', 'Not a function.', uncaughtException );
-        }
-    }
-
-    /**
-     * @function addMessenger(key,value,force)
-     * @desc 加入一個全域屬性
-     * @param {boolean} force 預設屬性會防止被重複宣告，設定force為true強制取代
-     */
-
-    addMessenger( key, value, force = false ){
-        if( this.messenger[key] == null || force === true ){
-            if( key.slice(0, 1) === "$" ){
-                this._protection[key] = value
-                Object.defineProperty( this.messenger, key, {
-                    set: ()=>{
-                        this.systemError('addMessenger', "This key is a private key, can't be change.", key );
-                    },
-                    get: ()=>{
-                        return this._protection[key];
-                    },
-                })
-            } else {
-                this.messenger[key] = value
-            }
-        } else {
-            this.systemError('addMessenger', 'Messenger key already exists.', key );
-        }
-    }
-
-    /**
-     * @function queue(name,action)
-     * @desc 加入一個貯列
-     */
-
-    queue( name, action ) {
-        if( typeof name === 'string' ){
-            if( typeof action === 'function' ){
-                this.queues.push({
-                    name : name,
-                    action : action,
-                });
-            }else{
-                this.systemError( 'queue', 'Action not a function.', action );
-            }
-        } else {
-            this.systemError( 'queue', 'Name not a string.', name );
-        }
-    }
-
-    /** 
-     * @function setPromoter(promoter)
-     * @desc 設定啟動事件
-     */
-
-    setPromoter(promoter) {
-        if( typeof promoter === 'function' ){
-            if( this.promoter == null ){
-                this.promoter = promoter;
-            } else {
-                this.systemError('setPromoter', 'Promoter already exists.', this.promoter );
-            }
-        }else{
-            this.systemError('setPromoter', 'Promoter not a function.', promoter );
-        }
-    }
-
-    /** 
-     * @function setMediator(mediator)
-     * @desc 設定中介事件
-     */
-
-    setMediator(mediator) {
-        if( typeof mediator === 'function' ){
-            if( this.mediator == null ){
-                this.mediator = mediator;
-            } else {
-                this.systemError('setPromoter', 'Promoter already exists.', this.mediator );
-            }
-        }else{
-            this.systemError('setMediator', 'Mediator not a function.', mediator );
-        }
-    }
-
-    /** 
-     * @function setTerminator(terminator)
-     * @desc 設定結束事件
-     */
-
-    setTerminator(terminator) {
-        if( typeof terminator === 'function' ){
-            if( this.terminator == null ){
-                this.terminator = terminator;
-            } else {
-                this.systemError('setTerminator', 'Terminator already exists.', this.terminator );
-            }
-        }else{
-            this.systemError('setTerminator', 'Terminator not a function.', terminator );
-        }
-    }
-
-    /** 
-     * @function transcription()
-     * @desc 執行系統
-     * @returns {Promise}
-     */
-
-    transcription() {
-        this.transcription = function(){
-            console.warn(`Nucleoid(${this.name}) => Transcription already called.`)
-        }
-        return new Promise(( resolve, reject )=>{
-            new Transcription( this, resolve, reject )
-        })
+    static createGene(name) {
+        return new Gene(name)
     }
 
 }
