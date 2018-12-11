@@ -5,18 +5,18 @@ class Curry extends ModuleBase {
         this.group = group;
         this.data = this.$verify(options, {
             name: [true, ''],
-            input: [true, function(){}],
-            output: [true, function(){}],
+            input: [true, '#function'],
+            output: [true, '#function'],
             methods: [true, {}]
         })
-        this.init();
+        this.checkPrivateKey()
     }
 
     get name() { return this.data.name }
 
-    init() {
+    checkPrivateKey() {
         let check = this.data.methods
-        if( check.action || check.promise || check.direct ){
+        if( check.action || check.promise ){
             this.$systemError('init', 'Methods has private key(action, promise, direct)')
         }
     }

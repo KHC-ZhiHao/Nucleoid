@@ -9,32 +9,24 @@ class Nucleoid {
         Bioreactor.addGroup( groupName, group, options );
     }
 
-    static addMethod(options) {
-        Bioreactor.addMethod(options)
+    static hasCurriedFunction(groupName, name) {
+        return Bioreactor.hasCurriedFunction(groupName, name)
     }
 
-    static currying(options) {
-        Bioreactor.currying(options)
-    }
-
-    static hasCurry(name) {
-        return Bioreactor.hasCurry(name)
-    }
-
-    static hasMethod(name) {
-        return Bioreactor.hasMethod(name)
+    static hasMethod(groupName, name) {
+        return Bioreactor.hasMethod(groupName, name)
     }
 
     static hasGroup(name) {
-        return Bioreactor.hasGroup(name)
+        return Bioreactor.hasGroup(groupName, name)
     }
 
-    static callMethod(name) {
-        return Bioreactor.getMethod(name).use()
+    static callMethod(groupName, name) {
+        return Bioreactor.getMethod(groupName, name).use()
     }
 
-    static callCurry(name) {
-        return Bioreactor.getCurry(name).use()
+    static callCurriedFunction(groupName, name) {
+        return Bioreactor.getCurriedFunction(groupName, name).use()
     }
 
     static createMethodGroup(options) {

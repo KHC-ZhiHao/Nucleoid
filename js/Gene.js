@@ -40,8 +40,10 @@ class Gene extends ModuleBase {
      */
 
     setTimeoutMode(enable, millisecond, action) {
-        if (enable && typeof millisecond === "number" && typeof action === "function") {
-            this.mode.timeout = { action, millisecond }
+        if (typeof enable === "boolean" && typeof millisecond === "number" && typeof action === "function") {
+            if (enable) {
+                this.mode.timeout = { action, millisecond }
+            }
         } else {
             this.$systemError( 'setTimeout', 'Params type error. try setTimeoutMode(boolean, number, function)' );
         }
@@ -53,8 +55,10 @@ class Gene extends ModuleBase {
      */
 
     setCatchExceptionMode( enable, action ){
-        if( enable && typeof action === "function" ){
-            this.mode.catchException = { action }
+        if (typeof enable === "boolean" && typeof action === "function") {
+            if (enable) {
+                this.mode.catchException = { action }
+            }
         } else {
             this.$systemError('setCatchExceptionMode', 'Params type error, try setCatchExceptionMode(boolean, function).')
         }
@@ -66,8 +70,10 @@ class Gene extends ModuleBase {
      */
 
     setCatchUncaughtException( enable, action ) {
-        if( enable && typeof action === "function" ){
-            this.mode.catchUncaughtException = { action }
+        if (typeof enable === "boolean" && typeof action === "function") {
+            if (enable) {
+                this.mode.catchUncaughtException = { action }
+            }
         }else{
             this.$systemError('setCatchUncaughtException', 'Params type error, try setCatchUncaughtException(boolean, function).')
         }

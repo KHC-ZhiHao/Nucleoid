@@ -322,18 +322,18 @@ class Curry extends ModuleBase {
         this.group = group;
         this.data = this.$verify(options, {
             name: [true, ''],
-            input: [true, function(){}],
-            output: [true, function(){}],
+            input: [true, '#function'],
+            output: [true, '#function'],
             methods: [true, {}]
         })
-        this.init();
+        this.checkPrivateKey()
     }
 
     get name() { return this.data.name }
 
-    init() {
+    checkPrivateKey() {
         let check = this.data.methods
-        if( check.action || check.promise || check.direct ){
+        if( check.action || check.promise ){
             this.$systemError('init', 'Methods has private key(action, promise, direct)')
         }
     }
@@ -452,12 +452,11 @@ class CurryUnit extends ModuleBase {
 
 class MethodGroup extends ModuleBase {
 
-    constructor(options = {}, main) {
+    constructor(options = {}) {
         super("MethodGroup")
-        this.main = main || false
-        this.case = new Case();
-        this.pool = {};
-        this.curryPool = {};
+        this.case = new Case()
+        this.pool = {}
+        this.curriedPool = {}
         this.data = this.$verify(options, {
             create: [false, function(){}]
         })
@@ -468,54 +467,44 @@ class MethodGroup extends ModuleBase {
         this.create = null;
     }
 
+    // get
+
     getMethod(name) {
-        if( this.main ){
-            return Bioreactor.getMethod(name)
+        if( this.pool[name] ){
+            return this.pool[name]
         } else {
-            if( this.pool[name] ){
-                return this.pool[name]
-            } else {
-                this.$systemError('getMethod', 'method not found.', name)
-            }
+            this.$systemError('getMethod', 'method not found.', name)
         }
     }
 
-    getCurry(name) {
-        if( this.main ){
-            return Bioreactor.getCurry(name)
+    getCurriedFunction(name) {
+        if( this.curriedPool[name] ){
+            return this.curriedPool[name]
         } else {
-            if( this.curryPool[name] ){
-                return this.curryPool[name]
-            } else {
-                this.$systemError('getCurry', 'curry not found.', name)
-            }
+            this.$systemError('getCurry', 'curry not found.', name)
         }
     }
 
-    callMethod(name) {
-        return this.getMethod(name).use()
-    }
-
-    callCurry(name) {
-        return this.getCurry(name).use()
-    }
+    // compile
 
     currying(options){
-        let curry = new Curry(options, this);
-        if( this.$noKey('currying', this.curryPool, curry.name ) ){
-            this.curryPool[curry.name] = curry
+        let curry = new Curry(options, this)
+        if( this.$noKey('currying', this.curriedPool, curry.name ) ){
+            this.curriedPool[curry.name] = curry
         }
     }
 
     addMethod(options) {
-        let method = new Method(options, this);
+        let method = new Method(options, this)
         if( this.$noKey('addMethod', this.pool, method.name ) ){
             this.pool[method.name] = method
         }
     }
 
+    // has
+
     hasCurry(name) {
-        return !!this.curryPool[name]
+        return !!this.curriedPool[name]
     }
 
     hasMethod(name) {
@@ -533,14 +522,11 @@ class Method extends ModuleBase {
         this.data = this.$verify( options, {
             name : [true , ''],
             create : [false, function(){}],
-            action : [true , function(){}],
+            action : [true , '#function'],
             allowDirect : [false , true]
         })
         if( this.group == null ){
             this.$systemError('init', 'No has group', this)
-        }
-        if( this.name.includes('-') ){
-            this.$systemError('init', 'Symbol - is group protection.', name)
         }
     }
 
@@ -598,13 +584,13 @@ class Method extends ModuleBase {
     }
 
     promise(params) {
-        return new Promise(( resolve, reject )=>{
+        return new Promise((resolve, reject)=>{
             this.bind.action(params, this.bind.system, resolve, reject);
         })
     }
 
     getStore(key) {
-        if( this.store[key] ){
+        if (this.store[key]) {
             return this.store[key]
         } else {
             this.$systemError('getStore', 'Key not found.', key)
@@ -612,7 +598,7 @@ class Method extends ModuleBase {
     }
 
     use() {
-        if( this.install ){ 
+        if (this.install) { 
             this.install()
         }
         return {
@@ -667,8 +653,10 @@ class Gene extends ModuleBase {
      */
 
     setTimeoutMode(enable, millisecond, action) {
-        if (enable && typeof millisecond === "number" && typeof action === "function") {
-            this.mode.timeout = { action, millisecond }
+        if (typeof enable === "boolean" && typeof millisecond === "number" && typeof action === "function") {
+            if (enable) {
+                this.mode.timeout = { action, millisecond }
+            }
         } else {
             this.$systemError( 'setTimeout', 'Params type error. try setTimeoutMode(boolean, number, function)' );
         }
@@ -680,8 +668,10 @@ class Gene extends ModuleBase {
      */
 
     setCatchExceptionMode( enable, action ){
-        if( enable && typeof action === "function" ){
-            this.mode.catchException = { action }
+        if (typeof enable === "boolean" && typeof action === "function") {
+            if (enable) {
+                this.mode.catchException = { action }
+            }
         } else {
             this.$systemError('setCatchExceptionMode', 'Params type error, try setCatchExceptionMode(boolean, function).')
         }
@@ -693,8 +683,10 @@ class Gene extends ModuleBase {
      */
 
     setCatchUncaughtException( enable, action ) {
-        if( enable && typeof action === "function" ){
-            this.mode.catchUncaughtException = { action }
+        if (typeof enable === "boolean" && typeof action === "function") {
+            if (enable) {
+                this.mode.catchUncaughtException = { action }
+            }
         }else{
             this.$systemError('setCatchUncaughtException', 'Params type error, try setCatchUncaughtException(boolean, function).')
         }
@@ -788,75 +780,52 @@ class BioreactorBase extends ModuleBase {
 
     constructor() {
         super("Bioreactor")
-        this.mainGroup = new MethodGroup( {}, true );
         this.groups = {};
     }
+
+    // Get
+
+    getGroup(name) {
+        return this.groups[name]
+    }
+
+    getMethod(groupName, name) {
+        return this.getGroup(groupName).getMethod(name)
+    }
+
+    getCurriedFunction(groupName, name) {
+        return this.getGroup(groupName).getCurriedFunction(name)
+    }
+
+    // Add
+
+    addGroup(name, group, options) {
+        if( this.groups[name] == null ) {
+            if (group instanceof MethodGroup) {
+                if (group.create) {
+                    group.create(options)
+                }
+                this.groups[name] = group
+            } else {
+                this.$systemError('addGroup', 'Must group.', group)
+            }
+        } else {
+            this.$systemError('addGroup', 'Name already exists.', name)
+        }
+    }
+
+    // Has
 
     hasGroup(name) {
         return !!this.groups[name]
     }
 
-    hasMethod(name) {
-        return !!this.mainGroup.hasMethod(name)
+    hasMethod(groupName, name) {
+        return !!this.getGroup(groupName).hasMethod(name)
     }
 
-    hasCurry(name) {
-        return !!this.mainGroup.hasCurry(name)
-    }
-
-    getMethod(name) {
-        let groupMode = name.includes('-');
-        let split = groupMode ? name.split('-') : [null, name];
-        let target = groupMode ? this.groups[split[0]] : this.mainGroup
-        if( target ){
-            let method = target.pool[split[1]];
-            if( method ){
-                return method
-            } else {
-                this.$systemError('getMethod', 'Method not found.', split[1])
-            }
-        } else {
-            this.$systemError('getMethod', 'Group not found.', split[0])
-        }
-    }
-
-    getCurry(name) {
-        let groupMode = name.includes('-');
-        let split = groupMode ? name.split('-') : [null, name];
-        let target = groupMode ? this.groups[split[0]] : this.mainGroup
-        if( target ){
-            let curry = target.curryPool[split[1]];
-            if( curry ){
-                return curry
-            } else {
-                this.$systemError('getCurry', 'Method not found.', split[1])
-            }
-        } else {
-            this.$systemError('getCurry', 'Group not found.', split[0])
-        }
-    }
-
-    addMethod(options) {
-        this.mainGroup.addMethod(options)
-    }
-
-    currying(options) {
-        this.mainGroup.currying(options)
-    }
-
-    addGroup(name, group, options) {
-        if( this.groups[name] == null ) {
-            if( group instanceof MethodGroup ){
-                if( group.create ){
-                    group.create(options)
-                }
-                this.groups[name] = group;
-            } else {
-                this.$systemError('addGroup', 'Must group.', group)
-            }
-        } else {
-            this.$systemError('addGroup', 'Name already exists.', name);
-        }
+    hasCurriedFunction(groupName, name) {
+        return !!this.getGroup(groupName).hasCurriedFunction(name)
     }
 
 }
@@ -895,11 +864,11 @@ class Translation extends ModuleBase {
 
     initBind() {
         this.bind = {
+            io: this.io.bind(this),
             exit: this.exit.bind(this),
             fail: this.fail.bind(this),
             next: this.next.bind(this),
             mixin: this.mixin.bind(this),
-            curry: this.curry.bind(this),
             methods: this.methods.bind(this)
         }
     }
@@ -976,8 +945,8 @@ class Translation extends ModuleBase {
 
     getSkill(status) {
         return {
+            io: this.bind.io,
             mixin: this.bind.mixin,
-            curry: this.bind.curry,
             methods: this.bind.methods,
             polling: this.root.bindPolling(status),
             createFragment: this.root.bindFragment(status)
@@ -989,18 +958,18 @@ class Translation extends ModuleBase {
      * @desc 獲取使用的模塊
      */
 
-    methods(name){
-        return this.bioreactor.getMethod(name).use();
+    methods(groupName, name){
+        return this.bioreactor.getMethod(groupName, name).use();
     }
 
-    curry(name){
-        return this.bioreactor.getCurry(name).use();
+    io(groupName, name){
+        return this.bioreactor.getCurriedFunction(groupName, name).use();
     }
 
     mixin(gene, callback) {
         if (gene instanceof Gene) {
             gene.translation().then((result) => {
-                this.status.addChildren(status)
+                this.status.addChildren(result.status)
                 callback(null, result.messenger)
             }, (error) => {
                 this.status.addChildren(error.status)
@@ -1138,32 +1107,24 @@ class Nucleoid {
         Bioreactor.addGroup( groupName, group, options );
     }
 
-    static addMethod(options) {
-        Bioreactor.addMethod(options)
+    static hasCurriedFunction(groupName, name) {
+        return Bioreactor.hasCurriedFunction(groupName, name)
     }
 
-    static currying(options) {
-        Bioreactor.currying(options)
-    }
-
-    static hasCurry(name) {
-        return Bioreactor.hasCurry(name)
-    }
-
-    static hasMethod(name) {
-        return Bioreactor.hasMethod(name)
+    static hasMethod(groupName, name) {
+        return Bioreactor.hasMethod(groupName, name)
     }
 
     static hasGroup(name) {
-        return Bioreactor.hasGroup(name)
+        return Bioreactor.hasGroup(groupName, name)
     }
 
-    static callMethod(name) {
-        return Bioreactor.getMethod(name).use()
+    static callMethod(groupName, name) {
+        return Bioreactor.getMethod(groupName, name).use()
     }
 
-    static callCurry(name) {
-        return Bioreactor.getCurry(name).use()
+    static callCurriedFunction(groupName, name) {
+        return Bioreactor.getCurriedFunction(groupName, name).use()
     }
 
     static createMethodGroup(options) {

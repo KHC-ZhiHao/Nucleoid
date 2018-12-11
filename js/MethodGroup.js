@@ -1,11 +1,10 @@
 class MethodGroup extends ModuleBase {
 
-    constructor(options = {}, main) {
+    constructor(options = {}) {
         super("MethodGroup")
-        this.main = main || false
-        this.case = new Case();
-        this.pool = {};
-        this.curryPool = {};
+        this.case = new Case()
+        this.pool = {}
+        this.curriedPool = {}
         this.data = this.$verify(options, {
             create: [false, function(){}]
         })
@@ -16,54 +15,44 @@ class MethodGroup extends ModuleBase {
         this.create = null;
     }
 
+    // get
+
     getMethod(name) {
-        if( this.main ){
-            return Bioreactor.getMethod(name)
+        if( this.pool[name] ){
+            return this.pool[name]
         } else {
-            if( this.pool[name] ){
-                return this.pool[name]
-            } else {
-                this.$systemError('getMethod', 'method not found.', name)
-            }
+            this.$systemError('getMethod', 'method not found.', name)
         }
     }
 
-    getCurry(name) {
-        if( this.main ){
-            return Bioreactor.getCurry(name)
+    getCurriedFunction(name) {
+        if( this.curriedPool[name] ){
+            return this.curriedPool[name]
         } else {
-            if( this.curryPool[name] ){
-                return this.curryPool[name]
-            } else {
-                this.$systemError('getCurry', 'curry not found.', name)
-            }
+            this.$systemError('getCurry', 'curry not found.', name)
         }
     }
 
-    callMethod(name) {
-        return this.getMethod(name).use()
-    }
-
-    callCurry(name) {
-        return this.getCurry(name).use()
-    }
+    // compile
 
     currying(options){
-        let curry = new Curry(options, this);
-        if( this.$noKey('currying', this.curryPool, curry.name ) ){
-            this.curryPool[curry.name] = curry
+        let curry = new Curry(options, this)
+        if( this.$noKey('currying', this.curriedPool, curry.name ) ){
+            this.curriedPool[curry.name] = curry
         }
     }
 
     addMethod(options) {
-        let method = new Method(options, this);
+        let method = new Method(options, this)
         if( this.$noKey('addMethod', this.pool, method.name ) ){
             this.pool[method.name] = method
         }
     }
 
+    // has
+
     hasCurry(name) {
-        return !!this.curryPool[name]
+        return !!this.curriedPool[name]
     }
 
     hasMethod(name) {

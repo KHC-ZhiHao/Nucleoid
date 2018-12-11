@@ -30,11 +30,11 @@ class Translation extends ModuleBase {
 
     initBind() {
         this.bind = {
+            io: this.io.bind(this),
             exit: this.exit.bind(this),
             fail: this.fail.bind(this),
             next: this.next.bind(this),
             mixin: this.mixin.bind(this),
-            curry: this.curry.bind(this),
             methods: this.methods.bind(this)
         }
     }
@@ -111,8 +111,8 @@ class Translation extends ModuleBase {
 
     getSkill(status) {
         return {
+            io: this.bind.io,
             mixin: this.bind.mixin,
-            curry: this.bind.curry,
             methods: this.bind.methods,
             polling: this.root.bindPolling(status),
             createFragment: this.root.bindFragment(status)
@@ -124,18 +124,18 @@ class Translation extends ModuleBase {
      * @desc 獲取使用的模塊
      */
 
-    methods(name){
-        return this.bioreactor.getMethod(name).use();
+    methods(groupName, name){
+        return this.bioreactor.getMethod(groupName, name).use();
     }
 
-    curry(name){
-        return this.bioreactor.getCurry(name).use();
+    io(groupName, name){
+        return this.bioreactor.getCurriedFunction(groupName, name).use();
     }
 
     mixin(gene, callback) {
         if (gene instanceof Gene) {
             gene.translation().then((result) => {
-                this.status.addChildren(status)
+                this.status.addChildren(result.status)
                 callback(null, result.messenger)
             }, (error) => {
                 this.status.addChildren(error.status)

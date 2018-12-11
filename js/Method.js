@@ -8,14 +8,11 @@ class Method extends ModuleBase {
         this.data = this.$verify( options, {
             name : [true , ''],
             create : [false, function(){}],
-            action : [true , function(){}],
+            action : [true , '#function'],
             allowDirect : [false , true]
         })
         if( this.group == null ){
             this.$systemError('init', 'No has group', this)
-        }
-        if( this.name.includes('-') ){
-            this.$systemError('init', 'Symbol - is group protection.', name)
         }
     }
 
@@ -73,13 +70,13 @@ class Method extends ModuleBase {
     }
 
     promise(params) {
-        return new Promise(( resolve, reject )=>{
+        return new Promise((resolve, reject)=>{
             this.bind.action(params, this.bind.system, resolve, reject);
         })
     }
 
     getStore(key) {
-        if( this.store[key] ){
+        if (this.store[key]) {
             return this.store[key]
         } else {
             this.$systemError('getStore', 'Key not found.', key)
@@ -87,7 +84,7 @@ class Method extends ModuleBase {
     }
 
     use() {
-        if( this.install ){ 
+        if (this.install) { 
             this.install()
         }
         return {
