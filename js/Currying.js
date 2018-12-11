@@ -36,23 +36,11 @@ class CurryUnit extends ModuleBase {
         super("CurryUnit");
         this.case = new Case()
         this.flow = []
-        this.main = main;
-        this.index = 0;
-        this.params = params;
-        this.previousFlow = null;
-        this.initRegisterMethod();
-    }
-
-    action(callback) {
-        let error = function(error){ callback(error, null) }
-        let success = function(success) { callback(null, success) }
-        this.activation( error, success )
-    }
-
-    promise() {
-        return new Promise(( resolve, reject )=>{
-            this.activation( reject, resolve )
-        })
+        this.main = main
+        this.index = 0
+        this.params = params
+        this.previousFlow = null
+        this.initRegisterMethod()
     }
 
     initRegisterMethod() {
@@ -63,14 +51,14 @@ class CurryUnit extends ModuleBase {
         }
         for( let key in this.main.data.methods ){
             this.registergMethod[key] = function() {
-                self.register(key, [...arguments]);
-                return self.getRegisterMethod();
+                self.register(key, [...arguments])
+                return self.getRegisterMethod()
             }
         }
     }
 
     getRegisterMethod() {
-        return this.registergMethod;
+        return this.registergMethod
     }
 
     register(name, params) {
@@ -94,11 +82,24 @@ class CurryUnit extends ModuleBase {
         return this.main.group.getMethod(name).use()
     }
 
+    action(callback) {
+        let error = function(error){ callback(error, null) }
+        let success = function(success) { callback(null, success) }
+        this.activation( error, success )
+    }
+
+    promise() {
+        return new Promise(( resolve, reject )=>{
+            this.activation( reject, resolve )
+        })
+    }
+
     activation(error, success) {
-        let stop = false;
-        let index = 0;
+        let stop = false
+        let index = 0
+        let include = this.include.bind(this)
         let reject = (err) => {
-            error(err);
+            error(err)
             stop = true
         }
         let finish = () => {
@@ -110,13 +111,13 @@ class CurryUnit extends ModuleBase {
             if( flow ){
                 flow.method.bind(this.case)( ...flow.params, {
                     index: flow.index,
-                    include: this.include.bind(this),
+                    include,
                     nextFlow: flow.nextFlow,
                     previous: flow.previous
                 }, reject, finish)
             } else {
                 this.main.data.output.bind(this.case)({
-                    include: this.include.bind(this),
+                    include,
                 }, (error)=>{
                     reject(error)
                 }, (result)=>{
@@ -125,10 +126,10 @@ class CurryUnit extends ModuleBase {
             }
         }
         let pass = ()=>{
-            run();
+            run()
             pass = ()=>{}
         }
-        this.main.data.input.bind(this.case)( this.params, { include: this.include.bind(this) }, reject, pass );
+        this.main.data.input.bind(this.case)( this.params, { include }, reject, pass )
     }
 
 }

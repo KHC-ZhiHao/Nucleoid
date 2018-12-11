@@ -65,11 +65,11 @@ class Gene extends ModuleBase {
     }
 
     /**
-     * @function setCatchUncaughtException(enable,action)
+     * @function setCatchUncaughtExceptionMode(enable,action)
      * @desc 設定捕捉未捕獲Exception模式
      */
 
-    setCatchUncaughtException( enable, action ) {
+    setCatchUncaughtExceptionMode( enable, action ) {
         if (typeof enable === "boolean" && typeof action === "function") {
             if (enable) {
                 this.mode.catchUncaughtException = { action }
