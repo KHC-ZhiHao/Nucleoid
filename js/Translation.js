@@ -80,14 +80,14 @@ class Translation extends ModuleBase {
     initGenerator(){
         let self = this
         let generator = function * (){
-            let index = 0
+            let index = 1
             let template = self.templates[0]
             if( self.gene.synthesis.initiation ){
                 self.gene.synthesis.initiation.bind(self.case)(self.messenger, self.bind.exit, self.bind.fail)
             }
             while( index <= 10000 ){
-                if( self.finish ){
-                    break;
+                if (self.finish) {
+                    break
                 } else {
                     if( template == null ){
                         self.bind.exit()

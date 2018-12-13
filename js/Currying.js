@@ -7,23 +7,27 @@ class Curry extends ModuleBase {
             name: [true, ''],
             input: [true, '#function'],
             output: [true, '#function'],
+            opener: [false, []],
             methods: [true, {}]
         })
+        this.opener = this.data.opener || null
+        this.methods = {}
         this.checkPrivateKey()
     }
 
     get name() { return this.data.name }
 
     checkPrivateKey() {
-        let check = this.data.methods
-        if( check.action || check.promise ){
-            this.$systemError('init', 'Methods has private key(action, promise, direct)')
+        let methods = this.data.methods
+        if( methods.action || methods.promise ){
+            this.$systemError('init', 'Methods has private key(action, promise)')
         }
     }
 
     use() {
-        return (params) => {
-            let unit = new CurryUnit(this, params);
+        let self = this
+        return function() {
+            let unit = new CurryUnit(self, [...arguments]);
             return unit.getRegisterMethod();
         }
     }
@@ -33,12 +37,13 @@ class Curry extends ModuleBase {
 class CurryUnit extends ModuleBase {
 
     constructor(main, params) {
-        super("CurryUnit");
+        super("CurryUnit")
         this.case = new Case()
         this.flow = []
         this.main = main
         this.index = 0
         this.params = params
+        this.methods = {}
         this.previousFlow = null
         this.initRegisterMethod()
     }
@@ -49,9 +54,27 @@ class CurryUnit extends ModuleBase {
             action: this.action.bind(this),
             promise: this.promise.bind(this)
         }
-        for( let key in this.main.data.methods ){
-            this.registergMethod[key] = function() {
-                self.register(key, [...arguments])
+
+        let input = new Method({
+            name: 'input',
+            action: this.main.data.input
+        }, this.main.group)
+
+        let output = new Method({
+            name: 'output',
+            action: this.main.data.output
+        }, this.main.group)
+
+        this.input = input.turn(this.case).use()
+        this.output = output.turn(this.case).use()
+
+        for (let name in this.main.data.methods) {
+            this.methods[name] = new Method({
+                name: name,
+                action: this.main.data.methods[name]
+            }, this.main.group)
+            this.registergMethod[name] = function() {
+                self.register(name, [...arguments])
                 return self.getRegisterMethod()
             }
         }
@@ -62,12 +85,17 @@ class CurryUnit extends ModuleBase {
     }
 
     register(name, params) {
+        if (this.main.opener.length !== 0 && this.flow.length === 0) {
+            if (!this.main.opener.includes(name)) {
+                this.$systemError('register', 'First call method not inside opener.', name)
+            }
+        }
         let data = {
             name: name,
             nextFlow: null,
             previous: this.flow.slice(-1),
             index: this.index,
-            method: this.main.data.methods[name],
+            method: this.methods[name].turn(this.case).use(),
             params: params
         }
         if( this.previousFlow ){
@@ -97,39 +125,35 @@ class CurryUnit extends ModuleBase {
     activation(error, success) {
         let stop = false
         let index = 0
-        let include = this.include.bind(this)
-        let reject = (err) => {
-            error(err)
-            stop = true
-        }
-        let finish = () => {
-            index += 1
-            if( stop === false ){ run() }
-        }
         let run = () => {
             let flow = this.flow[index]
             if( flow ){
-                flow.method.bind(this.case)( ...flow.params, {
-                    index: flow.index,
-                    include,
-                    nextFlow: flow.nextFlow,
-                    previous: flow.previous
-                }, reject, finish)
+                flow.method.action(...flow.params, (err) => {
+                    if (err) {
+                        error(err)
+                        stop = true
+                    } else {
+                        index += 1
+                        if( stop === false ){ run() }
+                    }
+                })
             } else {
-                this.main.data.output.bind(this.case)({
-                    include,
-                }, (error)=>{
-                    reject(error)
-                }, (result)=>{
-                    success(result)
+                this.output.action((err, result) => {
+                    if (err) {
+                        error(err)
+                    } else {
+                        success(result)
+                    }
                 })
             }
         }
-        let pass = ()=>{
-            run()
-            pass = ()=>{}
-        }
-        this.main.data.input.bind(this.case)( this.params, { include }, reject, pass )
+        this.input.action(...this.params, (err) => {
+            if (err) {
+                error(err)
+            } else {
+                run()
+            }
+        })
     }
 
 }

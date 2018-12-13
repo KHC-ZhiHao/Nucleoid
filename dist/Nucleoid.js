@@ -35,7 +35,7 @@ class ModuleBase {
 
     $systemError( functionName, message, object = '$_no_error' ){
         if( object !== '$_no_error' ){
-            console.log( `%c error object is : `, 'color:#FFF; background:red' );
+            console.log( `%c error : `, 'color:#FFF; background:red' );
             console.log( object );
         }
         throw new Error( `(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}` );
@@ -324,23 +324,27 @@ class Curry extends ModuleBase {
             name: [true, ''],
             input: [true, '#function'],
             output: [true, '#function'],
+            opener: [false, []],
             methods: [true, {}]
         })
+        this.opener = this.data.opener || null
+        this.methods = {}
         this.checkPrivateKey()
     }
 
     get name() { return this.data.name }
 
     checkPrivateKey() {
-        let check = this.data.methods
-        if( check.action || check.promise ){
-            this.$systemError('init', 'Methods has private key(action, promise, direct)')
+        let methods = this.data.methods
+        if( methods.action || methods.promise ){
+            this.$systemError('init', 'Methods has private key(action, promise)')
         }
     }
 
     use() {
-        return (params) => {
-            let unit = new CurryUnit(this, params);
+        let self = this
+        return function() {
+            let unit = new CurryUnit(self, [...arguments]);
             return unit.getRegisterMethod();
         }
     }
@@ -350,12 +354,13 @@ class Curry extends ModuleBase {
 class CurryUnit extends ModuleBase {
 
     constructor(main, params) {
-        super("CurryUnit");
+        super("CurryUnit")
         this.case = new Case()
         this.flow = []
         this.main = main
         this.index = 0
         this.params = params
+        this.methods = {}
         this.previousFlow = null
         this.initRegisterMethod()
     }
@@ -366,9 +371,27 @@ class CurryUnit extends ModuleBase {
             action: this.action.bind(this),
             promise: this.promise.bind(this)
         }
-        for( let key in this.main.data.methods ){
-            this.registergMethod[key] = function() {
-                self.register(key, [...arguments])
+
+        let input = new Method({
+            name: 'input',
+            action: this.main.data.input
+        }, this.main.group)
+
+        let output = new Method({
+            name: 'output',
+            action: this.main.data.output
+        }, this.main.group)
+
+        this.input = input.turn(this.case).use()
+        this.output = output.turn(this.case).use()
+
+        for (let name in this.main.data.methods) {
+            this.methods[name] = new Method({
+                name: name,
+                action: this.main.data.methods[name]
+            }, this.main.group)
+            this.registergMethod[name] = function() {
+                self.register(name, [...arguments])
                 return self.getRegisterMethod()
             }
         }
@@ -379,12 +402,17 @@ class CurryUnit extends ModuleBase {
     }
 
     register(name, params) {
+        if (this.main.opener.length !== 0 && this.flow.length === 0) {
+            if (!this.main.opener.includes(name)) {
+                this.$systemError('register', 'First call method not inside opener.', name)
+            }
+        }
         let data = {
             name: name,
             nextFlow: null,
             previous: this.flow.slice(-1),
             index: this.index,
-            method: this.main.data.methods[name],
+            method: this.methods[name].turn(this.case).use(),
             params: params
         }
         if( this.previousFlow ){
@@ -414,39 +442,35 @@ class CurryUnit extends ModuleBase {
     activation(error, success) {
         let stop = false
         let index = 0
-        let include = this.include.bind(this)
-        let reject = (err) => {
-            error(err)
-            stop = true
-        }
-        let finish = () => {
-            index += 1
-            if( stop === false ){ run() }
-        }
         let run = () => {
             let flow = this.flow[index]
             if( flow ){
-                flow.method.bind(this.case)( ...flow.params, {
-                    index: flow.index,
-                    include,
-                    nextFlow: flow.nextFlow,
-                    previous: flow.previous
-                }, reject, finish)
+                flow.method.action(...flow.params, (err) => {
+                    if (err) {
+                        error(err)
+                        stop = true
+                    } else {
+                        index += 1
+                        if( stop === false ){ run() }
+                    }
+                })
             } else {
-                this.main.data.output.bind(this.case)({
-                    include,
-                }, (error)=>{
-                    reject(error)
-                }, (result)=>{
-                    success(result)
+                this.output.action((err, result) => {
+                    if (err) {
+                        error(err)
+                    } else {
+                        success(result)
+                    }
                 })
             }
         }
-        let pass = ()=>{
-            run()
-            pass = ()=>{}
-        }
-        this.main.data.input.bind(this.case)( this.params, { include }, reject, pass )
+        this.input.action(...this.params, (err) => {
+            if (err) {
+                error(err)
+            } else {
+                run()
+            }
+        })
     }
 
 }
@@ -526,6 +550,7 @@ class Method extends ModuleBase {
             action : [true , '#function'],
             allowDirect : [false , true]
         })
+        this.argumentLength = this.data.action.length
         if( this.group == null ){
             this.$systemError('init', 'No has group', this)
         }
@@ -533,6 +558,11 @@ class Method extends ModuleBase {
 
     get name() { return this.data.name }
     get groupCase() { return this.group.case }
+
+    turn(target) {
+        this.case = target
+        return this
+    }
 
     install() {
         this.initBindData()
@@ -555,6 +585,23 @@ class Method extends ModuleBase {
         }
     }
 
+    readFunctions(func, type) {
+        let self = this
+        let target = func.bind(this)
+        return function () {
+            let params = [...arguments]
+            let callback = null
+            if (type === 'action') {
+                callback = params.pop()
+            }
+            let args = new Array(self.argumentLength - 3)
+            for (let i = 0; i < args.length; i++) {
+                args[i] = params[i]
+            }
+            return target(args, callback)
+        }
+    }
+
     include(name) {
         return this.group.getMethod(name).use()
     }
@@ -570,7 +617,7 @@ class Method extends ModuleBase {
         let success = function(data) {
             output = data
         }
-        this.bind.action(params, this.bind.system, error, success);
+        this.bind.action(...params, this.bind.system, error, success);
         return output
     }
 
@@ -581,12 +628,12 @@ class Method extends ModuleBase {
         let success = function(success) {
             callback(null, success);
         }
-        this.bind.action(params, this.bind.system, error, success);
+        this.bind.action(...params, this.bind.system, error, success);
     }
 
     promise(params) {
         return new Promise((resolve, reject)=>{
-            this.bind.action(params, this.bind.system, resolve, reject);
+            this.bind.action(...params, this.bind.system, resolve, reject);
         })
     }
 
@@ -599,14 +646,14 @@ class Method extends ModuleBase {
     }
 
     use() {
-        if (this.install) { 
+        if (this.install) {
             this.install()
         }
         return {
             store: this.getStore.bind(this),
-            direct: this.direct.bind(this),
-            action: this.action.bind(this),
-            promise: this.promise.bind(this)
+            direct: this.readFunctions(this.direct),
+            action: this.readFunctions(this.action, 'action'),
+            promise: this.readFunctions(this.promise)
         }
     }
 
@@ -915,14 +962,14 @@ class Translation extends ModuleBase {
     initGenerator(){
         let self = this
         let generator = function * (){
-            let index = 0
+            let index = 1
             let template = self.templates[0]
             if( self.gene.synthesis.initiation ){
                 self.gene.synthesis.initiation.bind(self.case)(self.messenger, self.bind.exit, self.bind.fail)
             }
             while( index <= 10000 ){
-                if( self.finish ){
-                    break;
+                if (self.finish) {
+                    break
                 } else {
                     if( template == null ){
                         self.bind.exit()

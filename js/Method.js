@@ -11,6 +11,7 @@ class Method extends ModuleBase {
             action : [true , '#function'],
             allowDirect : [false , true]
         })
+        this.argumentLength = this.data.action.length
         if( this.group == null ){
             this.$systemError('init', 'No has group', this)
         }
@@ -18,6 +19,11 @@ class Method extends ModuleBase {
 
     get name() { return this.data.name }
     get groupCase() { return this.group.case }
+
+    turn(target) {
+        this.case = target
+        return this
+    }
 
     install() {
         this.initBindData()
@@ -40,6 +46,23 @@ class Method extends ModuleBase {
         }
     }
 
+    readFunctions(func, type) {
+        let self = this
+        let target = func.bind(this)
+        return function () {
+            let params = [...arguments]
+            let callback = null
+            if (type === 'action') {
+                callback = params.pop()
+            }
+            let args = new Array(self.argumentLength - 3)
+            for (let i = 0; i < args.length; i++) {
+                args[i] = params[i]
+            }
+            return target(args, callback)
+        }
+    }
+
     include(name) {
         return this.group.getMethod(name).use()
     }
@@ -55,7 +78,7 @@ class Method extends ModuleBase {
         let success = function(data) {
             output = data
         }
-        this.bind.action(params, this.bind.system, error, success);
+        this.bind.action(...params, this.bind.system, error, success);
         return output
     }
 
@@ -66,12 +89,12 @@ class Method extends ModuleBase {
         let success = function(success) {
             callback(null, success);
         }
-        this.bind.action(params, this.bind.system, error, success);
+        this.bind.action(...params, this.bind.system, error, success);
     }
 
     promise(params) {
         return new Promise((resolve, reject)=>{
-            this.bind.action(params, this.bind.system, resolve, reject);
+            this.bind.action(...params, this.bind.system, resolve, reject);
         })
     }
 
@@ -84,14 +107,14 @@ class Method extends ModuleBase {
     }
 
     use() {
-        if (this.install) { 
+        if (this.install) {
             this.install()
         }
         return {
             store: this.getStore.bind(this),
-            direct: this.direct.bind(this),
-            action: this.action.bind(this),
-            promise: this.promise.bind(this)
+            direct: this.readFunctions(this.direct),
+            action: this.readFunctions(this.action, 'action'),
+            promise: this.readFunctions(this.promise)
         }
     }
 

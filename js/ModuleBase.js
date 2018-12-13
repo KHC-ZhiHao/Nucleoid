@@ -18,7 +18,7 @@ class ModuleBase {
 
     $systemError( functionName, message, object = '$_no_error' ){
         if( object !== '$_no_error' ){
-            console.log( `%c error object is : `, 'color:#FFF; background:red' );
+            console.log( `%c error : `, 'color:#FFF; background:red' );
             console.log( object );
         }
         throw new Error( `(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}` );
