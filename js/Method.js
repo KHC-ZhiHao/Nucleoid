@@ -1,10 +1,12 @@
 class Method extends ModuleBase {
     
     constructor(options = {}, group) {
-        super('Method');
+        super('Method')
+        this.id = 0
         this.case = new Case()
-        this.store = {};
-        this.group = group;
+        this.used = []
+        this.store = {}
+        this.group = group
         this.data = this.$verify( options, {
             name : [true , ''],
             create : [false, function(){}],
@@ -46,7 +48,7 @@ class Method extends ModuleBase {
         }
     }
 
-    readFunctions(func, type) {
+    createLambda(func, type) {
         let self = this
         let target = func.bind(this)
         return function () {
@@ -61,6 +63,10 @@ class Method extends ModuleBase {
             }
             return target(args, callback)
         }
+    }
+
+    call(params, error, success) {
+        this.bind.action(...params, this.bind.system, error, success);
     }
 
     include(name) {
@@ -112,9 +118,9 @@ class Method extends ModuleBase {
         }
         return {
             store: this.getStore.bind(this),
-            direct: this.readFunctions(this.direct),
-            action: this.readFunctions(this.action, 'action'),
-            promise: this.readFunctions(this.promise)
+            direct: this.createLambda(this.direct),
+            action: this.createLambda(this.action, 'action'),
+            promise: this.createLambda(this.promise)
         }
     }
 

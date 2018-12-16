@@ -1,21 +1,19 @@
 class Root extends ModuleBase {
 
-    constructor(name) {
+    constructor(gene) {
         super("Root")
-        this.name = name
+        this.gene = gene
+        this.name = gene.name
+        this.base = {}
         this.delay = 10
-        this.startTime = 0
         this.operating = typeof window === 'undefined' ? 'node' : 'browser'
         this.pollingEvents = []
+        this.init()
     }
 
-    get operationTime() {
-        return Date.now() - this.startTime
-    }
-
-    install() {
-        this.status = new Status(this, null, this.name, 'root')
-        this.startTime = Date.now()
+    init() {
+        this.status = new Status(this.name, 'root')
+        this.initBase()
         this.initPolling()
     }
 
@@ -36,8 +34,38 @@ class Root extends ModuleBase {
         }, this.delay)
     }
 
-    polling(options, status) {
-        this.pollingEvents.push(new PollingEvent(this, status || this.status, options))
+    initBase() {
+        if (this.gene.genetic) {
+            let datas = this.gene.genetic()
+            if (typeof datas === "object") {
+                for (let key in datas) {
+                    this.addBase(key, datas[key])
+                }
+            } else {
+                this.$systemError('initBase', 'Genetic retrun not a object', datas)
+            }
+        }
+    }
+
+    /**
+     * @function addBase(key,value)
+     * @desc 加入一個全域屬性
+     */
+
+    addBase( key, value ){
+        if( this.base[key] == null ){
+            if( key.slice(0, 1) === "$" ){
+                this.$protection(this.base, key, this.protection, value)
+            } else {
+                this.base[key] = value
+            }
+        } else {
+            this.$systemError('addBase', 'Base key already exists.', key );
+        }
+    }
+
+    polling(options) {
+        this.pollingEvents.push(new PollingEvent(options))
     }
 
     clearPollingEvents() {
@@ -46,21 +74,9 @@ class Root extends ModuleBase {
         })
     }
 
-    createFragment(name, status) {
-        let fragment = new Fragment(this, status || this.status, name)
+    createFragment(name) {
+        let fragment = new Fragment(this, name)
         return fragment.use()
-    }
-
-    bindFragment(status) {
-        return (name) => {
-            return this.createFragment(name, status)
-        }
-    }
-
-    bindPolling(status) {
-        return (options) => {
-            return this.polling(options, status)
-        }
     }
 
     close() {
@@ -71,9 +87,9 @@ class Root extends ModuleBase {
 
 class PollingEvent extends ModuleBase {
 
-    constructor(root, status, options) {
+    constructor(options) {
         super('PollingEvent')
-        this.status = new Status(root, status, options.name, 'polling')
+        this.name = options.name
         this.action = options.action
         this.finish = false
     }
@@ -84,21 +100,19 @@ class PollingEvent extends ModuleBase {
 
     close() {
         this.finish = true
-        this.status.set(true)
     }
 
 }
 
 class Fragment extends ModuleBase {
 
-    constructor(root, status, name) {
+    constructor(root, name) {
         super('Fragment')
         this.root = root
         this.over = 0
         this.name = name || 'no name'
         this.stop = false
         this.thread = []
-        this.status = new Status(this.root, status, this.name, 'fragment')
     }
 
     install(callback) {
@@ -119,25 +133,21 @@ class Fragment extends ModuleBase {
         }))
     }
 
-    regsterError(status) {
+    regsterError() {
         return (error) => {
-            status.set(false, error)
             if( this.stop === false ){
                 this.stop = true
-                this.status.set(false, error)
                 this.callback(error)
             }
         }
     }
 
-    regsterOnload(status) {
+    regsterOnload() {
         return () => {
-            status.set(true)
             this.over += 1
             if( this.stop === false ){
                 if( this.over >= this.thread.length ){
                     this.stop = true
-                    this.status.set(true)
                     this.callback()
                 }
             }
@@ -146,9 +156,8 @@ class Fragment extends ModuleBase {
 
     actionThread(thread) {
         let func = async() => {
-            let status = new Status(this.root, this.status, thread.name, 'fragment-base')
-            let onload = this.regsterOnload(status)
-            let error = this.regsterError(status)
+            let onload = this.regsterOnload()
+            let error = this.regsterError()
             thread.action(error, onload)
         }
         func()

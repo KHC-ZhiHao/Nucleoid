@@ -1,29 +1,33 @@
 class Status extends ModuleBase{
 
-    constructor(root, parent, name, type) {
+    constructor(name, type) {
         super("Status")
-        this.root = root || null
         this.name = name || 'no name'
         this.type = type || 'no type'
-        this.parent = parent
+        this.cache = null
         this.message = ''
         this.success = false
         this.children = []
-        this.attributes = {}
-        this.operationTime = 0
-        if (this.parent) {
-            this.parent.addChildren(this)
-        }
+        this.startTime = Date.now()
+        this.finishTime = null
     }
 
-    add(name, message = null) {
-        this.attributes[name] = message || ''
+    get operationTime() {
+        return (this.finishTime || Date.now()) - this.startTime
     }
 
-    set(success, message) {
+    success() {
+        this.set(true)
+    }
+
+    error(message) {
+        this.set(false, message)
+    }
+
+    set(success, message = '') {
         this.success = success
-        this.message = message || ''
-        this.operationTime = this.root.operationTime
+        this.message = message
+        this.finishTime = Date.now()
     }
 
     get() {
@@ -32,7 +36,6 @@ class Status extends ModuleBase{
             type: this.type,
             message: this.message,
             success: this.success,
-            attributes: this.attributes,
             children: [],
             operationTime: this.operationTime
         }
@@ -46,9 +49,9 @@ class Status extends ModuleBase{
         return JSON.stringify(this.get(), null, 4)
     }
 
-    addChildren(status) {
+    addChildren(status, target = this.children) {
         if (status instanceof Status) {
-            this.children.push(status)
+            target.push(status)
         } else {
             this.$systemError('addChildren', 'Child not a status class.', status)
         }

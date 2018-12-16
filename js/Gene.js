@@ -1,14 +1,14 @@
 class Gene extends ModuleBase {
 
+    /**
+     * @member {object} genetic 預註冊的屬性，每次建立messenger會同步複製
+     */
+
     constructor(name){
-        super("Gene");
-        this.setName(name || 'no name');
-        this.root = new Root(this.name)
+        super("Gene")
+        this.setName(name || 'no name')
         this.templates = []
-        this.polymerase = {
-            messenger: {},
-            protection : {}
-        }
+        this.genetic = null
         this.mode = {
             timeout: null,
             catchException: null,
@@ -74,25 +74,16 @@ class Gene extends ModuleBase {
             if (enable) {
                 this.mode.catchUncaughtException = { action }
             }
-        }else{
+        } else {
             this.$systemError('setCatchUncaughtException', 'Params type error, try setCatchUncaughtException(boolean, function).')
         }
     }
 
-    /**
-     * @function addMessenger(key,value)
-     * @desc 加入一個全域屬性
-     */
-
-    addMessenger( key, value ){
-        if( this.polymerase.messenger[key] == null ){
-            if( key.slice(0, 1) === "$" ){
-                this.$protection(this.polymerase.messenger, key, this.polymerase.protection, value)
-            } else {
-                this.polymerase.messenger[key] = value
-            }
+    setGenetic(callback){
+        if (typeof callback === "function") {
+            this.genetic = callback
         } else {
-            this.$systemError('addMessenger', 'Messenger key already exists.', key );
+            this.$systemError('setGenetic', 'Params type error, try setGenetic(callback).')
         }
     }
 
@@ -149,15 +140,14 @@ class Gene extends ModuleBase {
     }
 
     /** 
-     * @function translation()
+     * @function transcription()
      * @desc 執行系統
      * @returns {Promise}
      */
 
-    translation() {
+    transcription() {
         return new Promise((resolve, reject) => {
-            this.root.install()
-            new Translation(this, resolve, reject)
+            new Transcription(this, resolve, reject)
         })
     }
 
