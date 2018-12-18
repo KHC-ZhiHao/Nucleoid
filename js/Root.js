@@ -18,6 +18,17 @@ class Root extends ModuleBase {
         return this.carryStatus || this.rootStatus
     }
 
+    getBase() {
+        let base = {}
+        for (let key in this.base) {
+            base[key] = this.base[key]
+        }
+        for (let key in this.protection) {
+            base[key] = this.protection[key]
+        }
+        return base 
+    }
+
     setTargetStatus(status) {
         this.carryStatus = status
     }

@@ -11,6 +11,7 @@ class Gene extends ModuleBase {
         this.genetic = null
         this.mode = {
             timeout: null,
+            traceBase: null,
             catchException: null,
             catchUncaughtException: null
         }
@@ -31,6 +32,16 @@ class Gene extends ModuleBase {
             this.name = name;
         } else {
             this.$systemError( 'setName', 'Name not a string.', name );
+        }
+    }
+
+    setTraceBaseMode(enable, action) {
+        if (typeof enable === "boolean" && typeof action === "function") {
+            if (enable) {
+                this.mode.traceBase = { action }
+            }
+        } else {
+            this.$systemError( 'setTraceBaseMode', 'Params type error. try setTraceBaseMode(boolean, function)' );
         }
     }
 

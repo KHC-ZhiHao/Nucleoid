@@ -109,8 +109,8 @@ class Transcription extends ModuleBase {
                             next = null
                             template = self.templates[index++]
                             status.set(true)
-                            self.root.setTargetStatus(null)
                             self.bind.next()
+                            self.root.setTargetStatus(null)
                         }
                         template.action.bind(self.case)(self.base, self.getSkill(), next, self.bind.exit, self.bind.fail)
                     }
@@ -120,6 +120,20 @@ class Transcription extends ModuleBase {
             return
         }
         this.iterator = generator();
+    }
+
+    deepClone(obj, hash = new WeakMap()) {
+        if (Object(obj) !== obj) return obj
+        if (obj instanceof Set) return new Set(obj)
+        if (hash.has(obj)) return hash.get(obj)
+        const result = obj instanceof Date ? new Date(obj)
+                     : obj instanceof RegExp ? new RegExp(obj.source, obj.flags)
+                     : Object.create(null)
+        hash.set(obj, result)
+        if (obj instanceof Map)
+            Array.from(obj, ([key, val]) => result.set(key, this.deepClone(val, hash)) )
+        return Object.assign(result, ...Object.keys(obj).map (
+            key => ({ [key]: this.deepClone(obj[key], hash) }) ))
     }
 
     getSkill() {
@@ -158,25 +172,6 @@ class Transcription extends ModuleBase {
         } else {
             this.$systemError('cross', 'Target not a gene module.', gene)
         }
-    }
-
-    /**
-     * @function getMethods()
-     * @desc 獲取模式
-     */
-
-    getMode(){
-        let mode = [];
-        if (this.gene.mode.catchException) {
-            mode.push('try-catch-mode')
-        }
-        if (this.gene.mode.timeout) {
-            mode.push('timeout')
-        }
-        if (this.gene.mode.catchUncaughtException) {
-            mode.push('uncaught-exception-mode')
-        }
-        return mode
     }
 
     close(success, message) {
@@ -222,7 +217,10 @@ class Transcription extends ModuleBase {
 
     next(){
         if (this.finish === false) {
-            if( this.gene.synthesis.elongation ){
+            if (this.gene.mode.traceBase) {
+                this.gene.mode.traceBase.action(this.deepClone(this.root.getBase()), this.status)
+            }
+            if (this.gene.synthesis.elongation) {
                 this.gene.synthesis.elongation(this.base, this.bind.exit, this.bind.fail)
             }
             setTimeout(()=>{

@@ -106,6 +106,17 @@ class Root extends ModuleBase {
         return this.carryStatus || this.rootStatus
     }
 
+    getBase() {
+        let base = {}
+        for (let key in this.base) {
+            base[key] = this.base[key]
+        }
+        for (let key in this.protection) {
+            base[key] = this.protection[key]
+        }
+        return base 
+    }
+
     setTargetStatus(status) {
         this.carryStatus = status
     }
@@ -297,18 +308,10 @@ class Messenger {
     constructor(root) {
         this.name = root.name
         this.base = root.base
+        this.gene = root.gene
         this.status = root.rootStatus
         this.success = root.rootStatus.success
-        this.getBase = function() {
-            let base = {}
-            for (let key in root.base) {
-                base[key] = root.base[key]
-            }
-            for (let key in root.protection) {
-                base[key] = root.protection[key]
-            }
-            return base 
-        }
+        this.getBase = root.getBase
     }
 
     isError() {
@@ -322,6 +325,29 @@ class Messenger {
     getStatusToJson() {
         return this.status.json()
     }
+
+    /**
+     * @function getMethods()
+     * @desc 獲取模式
+     */
+
+    getMode(){
+        let mode = [];
+        if (this.gene.mode.catchException) {
+            mode.push('try-catch-mode')
+        }
+        if (this.gene.mode.timeout) {
+            mode.push('timeout')
+        }
+        if (this.gene.mode.catchUncaughtException) {
+            mode.push('uncaught-exception-mode')
+        }
+        if (this.gene.mode.traceBase) {
+            mode.push('trace-base-mode')
+        }
+        return mode
+    }
+
 
 }
 class Status extends ModuleBase{
@@ -361,9 +387,9 @@ class Status extends ModuleBase{
             type: this.type,
             message: this.message,
             success: this.success,
-            children: [],
             attributes: this.attributes,
-            operationTime: this.operationTime
+            operationTime: this.operationTime,
+            children: []
         }
         for (let child of this.children) {
             data.children.push(child.get())
@@ -746,6 +772,7 @@ class Gene extends ModuleBase {
         this.genetic = null
         this.mode = {
             timeout: null,
+            traceBase: null,
             catchException: null,
             catchUncaughtException: null
         }
@@ -766,6 +793,16 @@ class Gene extends ModuleBase {
             this.name = name;
         } else {
             this.$systemError( 'setName', 'Name not a string.', name );
+        }
+    }
+
+    setTraceBaseMode(enable, action) {
+        if (typeof enable === "boolean" && typeof action === "function") {
+            if (enable) {
+                this.mode.traceBase = { action }
+            }
+        } else {
+            this.$systemError( 'setTraceBaseMode', 'Params type error. try setTraceBaseMode(boolean, function)' );
         }
     }
 
@@ -1055,8 +1092,8 @@ class Transcription extends ModuleBase {
                             next = null
                             template = self.templates[index++]
                             status.set(true)
-                            self.root.setTargetStatus(null)
                             self.bind.next()
+                            self.root.setTargetStatus(null)
                         }
                         template.action.bind(self.case)(self.base, self.getSkill(), next, self.bind.exit, self.bind.fail)
                     }
@@ -1066,6 +1103,20 @@ class Transcription extends ModuleBase {
             return
         }
         this.iterator = generator();
+    }
+
+    deepClone(obj, hash = new WeakMap()) {
+        if (Object(obj) !== obj) return obj
+        if (obj instanceof Set) return new Set(obj)
+        if (hash.has(obj)) return hash.get(obj)
+        const result = obj instanceof Date ? new Date(obj)
+                     : obj instanceof RegExp ? new RegExp(obj.source, obj.flags)
+                     : Object.create(null)
+        hash.set(obj, result)
+        if (obj instanceof Map)
+            Array.from(obj, ([key, val]) => result.set(key, this.deepClone(val, hash)) )
+        return Object.assign(result, ...Object.keys(obj).map (
+            key => ({ [key]: this.deepClone(obj[key], hash) }) ))
     }
 
     getSkill() {
@@ -1104,25 +1155,6 @@ class Transcription extends ModuleBase {
         } else {
             this.$systemError('cross', 'Target not a gene module.', gene)
         }
-    }
-
-    /**
-     * @function getMethods()
-     * @desc 獲取模式
-     */
-
-    getMode(){
-        let mode = [];
-        if (this.gene.mode.catchException) {
-            mode.push('try-catch-mode')
-        }
-        if (this.gene.mode.timeout) {
-            mode.push('timeout')
-        }
-        if (this.gene.mode.catchUncaughtException) {
-            mode.push('uncaught-exception-mode')
-        }
-        return mode
     }
 
     close(success, message) {
@@ -1168,7 +1200,10 @@ class Transcription extends ModuleBase {
 
     next(){
         if (this.finish === false) {
-            if( this.gene.synthesis.elongation ){
+            if (this.gene.mode.traceBase) {
+                this.gene.mode.traceBase.action(this.deepClone(this.root.getBase()), this.status)
+            }
+            if (this.gene.synthesis.elongation) {
                 this.gene.synthesis.elongation(this.base, this.bind.exit, this.bind.fail)
             }
             setTimeout(()=>{
