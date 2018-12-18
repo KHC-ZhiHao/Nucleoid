@@ -662,7 +662,11 @@ class Method extends ModuleBase {
             let params = [...arguments]
             let callback = null
             if (type === 'action') {
-                callback = params.pop()
+                if (typeof params.slice(-1)[0] === 'function') {
+                    callback = params.pop()
+                } else {
+                    self.$systemError('createLambda', 'Action must callback, no need? try direct!')
+                }
             }
             let args = new Array(self.argumentLength - 3)
             for (let i = 0; i < args.length; i++) {
@@ -691,7 +695,7 @@ class Method extends ModuleBase {
         return output
     }
 
-    action(params, callback) {
+    action(params, callback = function() {}) {
         let error = function(error){
             callback(error, null);
         }
