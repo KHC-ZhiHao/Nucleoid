@@ -170,7 +170,7 @@ class Fragment extends ModuleBase {
             if( this.stop === false ){
                 status.set(false, error)
                 this.stop = true
-                this.callback(error)
+                this.callback(error || 'unknown error')
             }
         }
     }

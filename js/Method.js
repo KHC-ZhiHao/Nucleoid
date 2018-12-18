@@ -78,7 +78,7 @@ class Method extends ModuleBase {
         }
         let output = null
         let error = function(error) {
-            throw new Error(error)
+            throw new Error(error || 'unknown error')
         }
         let success = function(data) {
             output = data
@@ -89,7 +89,7 @@ class Method extends ModuleBase {
 
     action(params, callback = function() {}) {
         let error = function(error){
-            callback(error, null);
+            callback(error || 'unknown error', null);
         }
         let success = function(success) {
             callback(null, success);

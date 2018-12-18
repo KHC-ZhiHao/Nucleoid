@@ -192,7 +192,7 @@ class Transcription extends ModuleBase {
     fail(error) {
         if (this.finish === false) {
             this.finish = true
-            this.close(false, error)
+            this.close(false, error || 'unknown error')
             this.reject(new Messenger(this.root))
         }
     }

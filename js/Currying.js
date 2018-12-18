@@ -111,7 +111,7 @@ class CurryUnit extends ModuleBase {
     }
 
     action(callback) {
-        let error = function(error){ callback(error, null) }
+        let error = function(error){ callback(error || 'unknown error', null) }
         let success = function(success) { callback(null, success) }
         this.activation( error, success )
     }

@@ -258,7 +258,7 @@ class Fragment extends ModuleBase {
             if( this.stop === false ){
                 status.set(false, error)
                 this.stop = true
-                this.callback(error)
+                this.callback(error || 'unknown error')
             }
         }
     }
@@ -523,7 +523,7 @@ class CurryUnit extends ModuleBase {
     }
 
     action(callback) {
-        let error = function(error){ callback(error, null) }
+        let error = function(error){ callback(error || 'unknown error', null) }
         let success = function(success) { callback(null, success) }
         this.activation( error, success )
     }
@@ -712,7 +712,7 @@ class Method extends ModuleBase {
         }
         let output = null
         let error = function(error) {
-            throw new Error(error)
+            throw new Error(error || 'unknown error')
         }
         let success = function(data) {
             output = data
@@ -723,7 +723,7 @@ class Method extends ModuleBase {
 
     action(params, callback = function() {}) {
         let error = function(error){
-            callback(error, null);
+            callback(error || 'unknown error', null);
         }
         let success = function(success) {
             callback(null, success);
@@ -1175,7 +1175,7 @@ class Transcription extends ModuleBase {
     fail(error) {
         if (this.finish === false) {
             this.finish = true
-            this.close(false, error)
+            this.close(false, error || 'unknown error')
             this.reject(new Messenger(this.root))
         }
     }
