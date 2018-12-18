@@ -50,7 +50,6 @@ class Method extends ModuleBase {
 
     createLambda(func, type) {
         let self = this
-        let target = func.bind(this)
         return function () {
             let params = [...arguments]
             let callback = null
@@ -61,12 +60,8 @@ class Method extends ModuleBase {
             for (let i = 0; i < args.length; i++) {
                 args[i] = params[i]
             }
-            return target(args, callback)
+            return func.bind(self)(args, callback)
         }
-    }
-
-    call(params, error, success) {
-        this.bind.action(...params, this.bind.system, error, success);
     }
 
     include(name) {
@@ -88,7 +83,7 @@ class Method extends ModuleBase {
         return output
     }
 
-    action(params, callback = function(){}) {
+    action(params, callback) {
         let error = function(error){
             callback(error, null);
         }

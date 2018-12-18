@@ -78,7 +78,7 @@ class ModuleBase {
                 this.$systemError('protection', "This key is a private key, can't be change.", key );
             },
             get: ()=>{
-                return getter[key];
+                return getter[key]
             },
         })
     }
@@ -88,22 +88,36 @@ class ModuleBase {
 class Case {}
 class Root extends ModuleBase {
 
-    constructor(name) {
+    constructor(gene) {
         super("Root")
-        this.name = name
+        this.gene = gene
+        this.name = gene.name
+        this.base = {}
         this.delay = 10
-        this.startTime = 0
         this.operating = typeof window === 'undefined' ? 'node' : 'browser'
+        this.rootStatus = new Status(this.name, 'root')
+        this.protection = {}
+        this.carryStatus = null
         this.pollingEvents = []
+        this.init()
     }
 
-    get operationTime() {
-        return Date.now() - this.startTime
+    get status() {
+        return this.carryStatus || this.rootStatus
     }
 
-    install() {
-        this.status = new Status(this, null, this.name, 'root')
-        this.startTime = Date.now()
+    setTargetStatus(status) {
+        this.carryStatus = status
+    }
+
+    createSystemStatus(name, success, message) {
+        let status = new Status(name, 'system')
+            status.set(success, message)
+        this.status.addChildren(status)
+    }
+
+    init() {
+        this.initBase()
         this.initPolling()
     }
 
@@ -124,8 +138,38 @@ class Root extends ModuleBase {
         }, this.delay)
     }
 
-    polling(options, status) {
-        this.pollingEvents.push(new PollingEvent(this, status || this.status, options))
+    initBase() {
+        if (this.gene.genetic) {
+            let datas = this.gene.genetic()
+            if (typeof datas === "object") {
+                for (let key in datas) {
+                    this.addBase(key, datas[key])
+                }
+            } else {
+                this.$systemError('initBase', 'Genetic retrun not a object', datas)
+            }
+        }
+    }
+
+    /**
+     * @function addBase(key,value)
+     * @desc 加入一個全域屬性
+     */
+
+    addBase( key, value ){
+        if( this.base[key] == null ){
+            if( key.slice(0, 1) === "$" ){
+                this.$protection(this.base, key, this.protection, value)
+            } else {
+                this.base[key] = value
+            }
+        } else {
+            this.$systemError('addBase', 'Base key already exists.', key );
+        }
+    }
+
+    polling(options) {
+        this.pollingEvents.push(new PollingEvent(this, options))
     }
 
     clearPollingEvents() {
@@ -134,24 +178,13 @@ class Root extends ModuleBase {
         })
     }
 
-    createFragment(name, status) {
-        let fragment = new Fragment(this, status || this.status, name)
+    createFragment(name) {
+        let fragment = new Fragment(this, name)
         return fragment.use()
     }
 
-    bindFragment(status) {
-        return (name) => {
-            return this.createFragment(name, status)
-        }
-    }
-
-    bindPolling(status) {
-        return (options) => {
-            return this.polling(options, status)
-        }
-    }
-
-    close() {
+    close(success, message) {
+        this.rootStatus.set(success, message)
         clearInterval(this.interval)
     }
 
@@ -159,11 +192,13 @@ class Root extends ModuleBase {
 
 class PollingEvent extends ModuleBase {
 
-    constructor(root, status, options) {
+    constructor(root, options) {
         super('PollingEvent')
-        this.status = new Status(root, status, options.name, 'polling')
+        this.name = options.name
+        this.status = new Status(this.name, 'polling')
         this.action = options.action
         this.finish = false
+        root.status.addChildren(this.status)
     }
 
     activate() {
@@ -171,22 +206,22 @@ class PollingEvent extends ModuleBase {
     }
 
     close() {
-        this.finish = true
         this.status.set(true)
+        this.finish = true
     }
 
 }
 
 class Fragment extends ModuleBase {
 
-    constructor(root, status, name) {
+    constructor(root, name) {
         super('Fragment')
-        this.root = root
         this.over = 0
         this.name = name || 'no name'
         this.stop = false
+        this.status = new Status(this.name, 'fragment')
         this.thread = []
-        this.status = new Status(this.root, status, this.name, 'fragment')
+        root.status.addChildren(this.status)
     }
 
     install(callback) {
@@ -209,10 +244,9 @@ class Fragment extends ModuleBase {
 
     regsterError(status) {
         return (error) => {
-            status.set(false, error)
             if( this.stop === false ){
+                status.set(false, error)
                 this.stop = true
-                this.status.set(false, error)
                 this.callback(error)
             }
         }
@@ -220,12 +254,11 @@ class Fragment extends ModuleBase {
 
     regsterOnload(status) {
         return () => {
-            status.set(true)
             this.over += 1
             if( this.stop === false ){
                 if( this.over >= this.thread.length ){
+                    status.set(true)
                     this.stop = true
-                    this.status.set(true)
                     this.callback()
                 }
             }
@@ -234,9 +267,10 @@ class Fragment extends ModuleBase {
 
     actionThread(thread) {
         let func = async() => {
-            let status = new Status(this.root, this.status, thread.name, 'fragment-base')
+            let status = new Status(thread.name, 'thread')
             let onload = this.regsterOnload(status)
             let error = this.regsterError(status)
+            this.status.addChildren(status)
             thread.action(error, onload)
         }
         func()
@@ -258,32 +292,62 @@ class Fragment extends ModuleBase {
 
 }
 
-class Status extends ModuleBase{
+class Messenger {
 
-    constructor(root, parent, name, type) {
-        super("Status")
-        this.root = root || null
-        this.name = name || 'no name'
-        this.type = type || 'no type'
-        this.parent = parent
-        this.message = ''
-        this.success = false
-        this.children = []
-        this.attributes = {}
-        this.operationTime = 0
-        if (this.parent) {
-            this.parent.addChildren(this)
+    constructor(root) {
+        this.name = root.name
+        this.base = root.base
+        this.status = root.rootStatus
+        this.success = root.rootStatus.success
+        this.getBase = function() {
+            let base = {}
+            for (let key in root.base) {
+                base[key] = root.base[key]
+            }
+            for (let key in root.protection) {
+                base[key] = root.protection[key]
+            }
+            return base 
         }
     }
 
-    add(name, message = null) {
-        this.attributes[name] = message || ''
+    isError() {
+        return !this.success
     }
 
-    set(success, message) {
-        this.success = success
-        this.message = message || ''
-        this.operationTime = this.root.operationTime
+    getErrorMessage() {
+        return this.isError ? this.status.message : null
+    }
+
+    getStatusToJson() {
+        return this.status.json()
+    }
+
+}
+class Status extends ModuleBase{
+
+    constructor(name, type) {
+        super("Status")
+        this.name = name || 'no name'
+        this.type = type || 'no type'
+        this.message = ''
+        this.success = false
+        this.children = []
+        this.startTime = Date.now()
+        this.finishTime = null
+    }
+
+    get operationTime() {
+        return (this.finishTime || Date.now()) - this.startTime
+    }
+
+    set(success, message = '') {
+        if (this.finishTime == null) {
+            this.success = success
+            this.message = message
+            this.finishTime = Date.now()
+        }
+        return this
     }
 
     get() {
@@ -292,7 +356,6 @@ class Status extends ModuleBase{
             type: this.type,
             message: this.message,
             success: this.success,
-            attributes: this.attributes,
             children: [],
             operationTime: this.operationTime
         }
@@ -540,10 +603,12 @@ class MethodGroup extends ModuleBase {
 class Method extends ModuleBase {
     
     constructor(options = {}, group) {
-        super('Method');
+        super('Method')
+        this.id = 0
         this.case = new Case()
-        this.store = {};
-        this.group = group;
+        this.used = []
+        this.store = {}
+        this.group = group
         this.data = this.$verify( options, {
             name : [true , ''],
             create : [false, function(){}],
@@ -585,9 +650,8 @@ class Method extends ModuleBase {
         }
     }
 
-    readFunctions(func, type) {
+    createLambda(func, type) {
         let self = this
-        let target = func.bind(this)
         return function () {
             let params = [...arguments]
             let callback = null
@@ -598,7 +662,7 @@ class Method extends ModuleBase {
             for (let i = 0; i < args.length; i++) {
                 args[i] = params[i]
             }
-            return target(args, callback)
+            return func.bind(self)(args, callback)
         }
     }
 
@@ -621,7 +685,7 @@ class Method extends ModuleBase {
         return output
     }
 
-    action(params, callback = function(){}) {
+    action(params, callback) {
         let error = function(error){
             callback(error, null);
         }
@@ -651,9 +715,9 @@ class Method extends ModuleBase {
         }
         return {
             store: this.getStore.bind(this),
-            direct: this.readFunctions(this.direct),
-            action: this.readFunctions(this.action, 'action'),
-            promise: this.readFunctions(this.promise)
+            direct: this.createLambda(this.direct),
+            action: this.createLambda(this.action, 'action'),
+            promise: this.createLambda(this.promise)
         }
     }
 
@@ -661,15 +725,15 @@ class Method extends ModuleBase {
 
 class Gene extends ModuleBase {
 
+    /**
+     * @member {object} genetic 預註冊的屬性，每次建立messenger會同步複製
+     */
+
     constructor(name){
-        super("Gene");
-        this.setName(name || 'no name');
-        this.root = new Root(this.name)
+        super("Gene")
+        this.setName(name || 'no name')
         this.templates = []
-        this.polymerase = {
-            messenger: {},
-            protection : {}
-        }
+        this.genetic = null
         this.mode = {
             timeout: null,
             catchException: null,
@@ -735,25 +799,16 @@ class Gene extends ModuleBase {
             if (enable) {
                 this.mode.catchUncaughtException = { action }
             }
-        }else{
+        } else {
             this.$systemError('setCatchUncaughtException', 'Params type error, try setCatchUncaughtException(boolean, function).')
         }
     }
 
-    /**
-     * @function addMessenger(key,value)
-     * @desc 加入一個全域屬性
-     */
-
-    addMessenger( key, value ){
-        if( this.polymerase.messenger[key] == null ){
-            if( key.slice(0, 1) === "$" ){
-                this.$protection(this.polymerase.messenger, key, this.polymerase.protection, value)
-            } else {
-                this.polymerase.messenger[key] = value
-            }
+    setGenetic(callback){
+        if (typeof callback === "function") {
+            this.genetic = callback
         } else {
-            this.$systemError('addMessenger', 'Messenger key already exists.', key );
+            this.$systemError('setGenetic', 'Params type error, try setGenetic(callback).')
         }
     }
 
@@ -810,15 +865,14 @@ class Gene extends ModuleBase {
     }
 
     /** 
-     * @function translation()
+     * @function transcription()
      * @desc 執行系統
      * @returns {Promise}
      */
 
-    translation() {
+    transcription() {
         return new Promise((resolve, reject) => {
-            this.root.install()
-            new Translation(this, resolve, reject)
+            new Transcription(this, resolve, reject)
         })
     }
 
@@ -881,26 +935,32 @@ class BioreactorBase extends ModuleBase {
 let Bioreactor = new BioreactorBase()
 
 /**
- * @class Translation(gene)
- * @desc 轉譯gene並輸出messenger，他會在運行Gene Translation實例化，保護其不被更改到
+ * @class Transcription(gene)
+ * @desc 轉譯gene並輸出messenger，他會在運行Gene Transcription實例化，保護其不被更改到
  */
 
-class Translation extends ModuleBase {
+class Transcription extends ModuleBase {
 
-    constructor(gene, resolve, reject){
-        super("Translation");
-        this.case = new Case()
+    constructor(gene, resolve, reject) {
+        super("Transcription");
         this.gene = gene
-        this.root = gene.root
-        this.status = this.root.status
+        this.case = new Case()
+        this.root = new Root(this.gene)
         this.finish = false
         this.reject = reject
         this.resolve = resolve
         this.templates = this.gene.templates
-        this.messenger = this.gene.polymerase.messenger
         this.bioreactor = Bioreactor
         this.init()
         this.synthesis()
+    }
+
+    get status() {
+        return this.root.status
+    }
+
+    get base() {
+        return this.root.base
     }
 
     init() {
@@ -917,7 +977,10 @@ class Translation extends ModuleBase {
             fail: this.fail.bind(this),
             next: this.next.bind(this),
             mixin: this.mixin.bind(this),
-            methods: this.methods.bind(this)
+            methods: this.methods.bind(this),
+            addBase: this.root.addBase.bind(this.root),
+            polling: this.root.polling.bind(this.root),
+            createFragment: this.root.createFragment.bind(this.root)
         }
     }
 
@@ -927,9 +990,9 @@ class Translation extends ModuleBase {
             let params = {
                 name: 'timeout',
                 action: (finish) => {
-                    if (this.root.operationTime > system.millisecond) {
-                        this.status.add('timeout')
-                        system.action.bind(this.case)(this.messenger, this.bind.exit, this.bind.fail)
+                    if (this.root.status.operationTime > system.millisecond) {
+                        this.root.createSystemStatus('timeout', true)
+                        system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
                         finish()
                     }
                 }
@@ -947,8 +1010,8 @@ class Translation extends ModuleBase {
         if( this.gene.mode.catchUncaughtException ){
             this.uncaughtExceptionAction = (error) => {
                 let exception = error.stack ? error : error.error
-                this.status.add('uncaughtException', exception.message);
-                this.gene.mode.catchUncaughtException.action.bind(this.case)(this.messenger, exception, this.bind.exit, this.bind.fail)
+                this.root.createSystemStatus('uncaught exception', true, exception.message)
+                this.gene.mode.catchUncaughtException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
             }
             if( this.root.operating === 'node' ){
                 this.uncaughtExceptionDomain = require('domain').create();
@@ -965,7 +1028,8 @@ class Translation extends ModuleBase {
             let index = 1
             let template = self.templates[0]
             if( self.gene.synthesis.initiation ){
-                self.gene.synthesis.initiation.bind(self.case)(self.messenger, self.bind.exit, self.bind.fail)
+                self.gene.synthesis.initiation.bind(self.case)(self.root, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
+                yield
             }
             while( index <= 10000 ){
                 if (self.finish) {
@@ -974,30 +1038,34 @@ class Translation extends ModuleBase {
                     if( template == null ){
                         self.bind.exit()
                     } else {
-                        let status = new Status(self.root, self.status, template.name, 'template')
+                        let status = new Status(template.name, 'template')
+                        self.root.status.addChildren(status)
+                        self.root.setTargetStatus(status)
                         let next = () => {
                             next = null
-                            status.set(true)
                             template = self.templates[index++]
+                            status.set(true)
+                            self.root.setTargetStatus(null)
                             self.bind.next()
                         }
-                        template.action.bind(self.case)(self.messenger, self.getSkill(status), next, self.bind.exit, self.bind.fail)
+                        template.action.bind(self.case)(self.base, self.getSkill(), next, self.bind.exit, self.bind.fail)
                     }
                 }
-                yield;
+                yield
             }
-            return;
+            return
         }
         this.iterator = generator();
     }
 
-    getSkill(status) {
+    getSkill() {
         return {
             io: this.bind.io,
             mixin: this.bind.mixin,
             methods: this.bind.methods,
-            polling: this.root.bindPolling(status),
-            createFragment: this.root.bindFragment(status)
+            polling: this.bind.polling,
+            addBase: this.bind.addBase,
+            createFragment: this.bind.createFragment
         }
     }
 
@@ -1007,24 +1075,21 @@ class Translation extends ModuleBase {
      */
 
     methods(groupName, name){
-        return this.bioreactor.getMethod(groupName, name).use();
+        return this.bioreactor.getMethod(groupName, name).use()
     }
 
     io(groupName, name){
-        return this.bioreactor.getCurriedFunction(groupName, name).use();
+        return this.bioreactor.getCurriedFunction(groupName, name).use()
     }
 
     mixin(gene, callback) {
         if (gene instanceof Gene) {
-            gene.translation().then((result) => {
-                this.status.addChildren(result.status)
-                callback(null, result.messenger)
-            }, (error) => {
-                this.status.addChildren(error.status)
-                callback({
-                    error: error.error,
-                    messenger: error.messenger
-                }, null)
+            gene.transcription().then((messenger) => {
+                this.root.status.addChildren(messenger.status)
+                callback(null, messenger)
+            }, (messenger) => {
+                this.root.status.addChildren(messenger.status)
+                callback(messenger.getErrorMessage(), messenger)
             })
         } else {
             this.$systemError('mixin', 'Target not a gene module.', gene)
@@ -1050,14 +1115,13 @@ class Translation extends ModuleBase {
         return mode
     }
 
-    close() {
-        this.status.add('mode', this.getMode())
-        this.root.close()
+    close(success, message) {
+        this.root.close(success, message)
         if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
             window.removeEventListener('error', this.uncaughtExceptionAction)
         }
         if (this.gene.synthesis.termination) {
-            this.gene.synthesis.termination.bind(this.case)(this.messenger, this.status);
+            this.gene.synthesis.termination.bind(this.case)(this.base, this.status);
         }
     }
 
@@ -1069,13 +1133,8 @@ class Translation extends ModuleBase {
     fail(error) {
         if (this.finish === false) {
             this.finish = true
-            this.status.set(false, error)
-            this.close()
-            this.reject({
-                error,
-                status: this.status,
-                messenger: this.messenger
-            })
+            this.close(false, error)
+            this.reject(new Messenger(this.root))
         }
     }
 
@@ -1084,15 +1143,11 @@ class Translation extends ModuleBase {
      * @desc 成功並結束模板
      */
 
-    exit(){
+    exit(message){
         if (this.finish === false) {
             this.finish = true
-            this.status.set(true)
-            this.close()
-            this.resolve({
-                status: this.status,
-                messenger : this.messenger
-            });
+            this.close(true, message)
+            this.resolve(new Messenger(this.root))
         }
     }
 
@@ -1104,10 +1159,10 @@ class Translation extends ModuleBase {
     next(){
         if (this.finish === false) {
             if( this.gene.synthesis.elongation ){
-                this.gene.synthesis.elongation( this.messenger, this.bind.exit, this.bind.fail )
+                this.gene.synthesis.elongation(this.base, this.bind.exit, this.bind.fail)
             }
             setTimeout(()=>{
-                this.synthesis();
+                this.synthesis()
             }, 1)
         }
     }
@@ -1121,9 +1176,9 @@ class Translation extends ModuleBase {
             try{
                 this.synthesisCatchUncaughtExceptionMode()
             } catch (exception) {
-                this.status.add('catch', exception.message)
                 if (this.gene.mode.catchException) {
-                    this.gene.mode.catchException.action.bind(this.case)(this.messenger, exception, this.bind.exit, this.bind.fail)
+                    this.root.createSystemStatus('error catch', true, exception.message)
+                    this.gene.mode.catchException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
                 }
                 return false
             }
@@ -1135,10 +1190,10 @@ class Translation extends ModuleBase {
     synthesisCatchUncaughtExceptionMode(){
         if( this.gene.mode.catchUncaughtException && this.root.operating === "node" ){
             this.uncaughtExceptionDomain.run(() => {
-                this.iterator.next();
+                this.iterator.next()
             });
         } else {
-            this.iterator.next();
+            this.iterator.next()
         }
     }
 

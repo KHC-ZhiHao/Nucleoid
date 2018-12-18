@@ -5,14 +5,14 @@
 
 class Transcription extends ModuleBase {
 
-    constructor(gene, resolve, reject){
+    constructor(gene, resolve, reject) {
         super("Transcription");
-        this.case = new Case()
         this.gene = gene
+        this.case = new Case()
+        this.root = new Root(this.gene)
         this.finish = false
         this.reject = reject
         this.resolve = resolve
-        this.root = new Root(this.gene)
         this.templates = this.gene.templates
         this.bioreactor = Bioreactor
         this.init()
@@ -41,7 +41,10 @@ class Transcription extends ModuleBase {
             fail: this.fail.bind(this),
             next: this.next.bind(this),
             mixin: this.mixin.bind(this),
-            methods: this.methods.bind(this)
+            methods: this.methods.bind(this),
+            addBase: this.root.addBase.bind(this.root),
+            polling: this.root.polling.bind(this.root),
+            createFragment: this.root.createFragment.bind(this.root)
         }
     }
 
@@ -52,6 +55,7 @@ class Transcription extends ModuleBase {
                 name: 'timeout',
                 action: (finish) => {
                     if (this.root.status.operationTime > system.millisecond) {
+                        this.root.createSystemStatus('timeout', true)
                         system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
                         finish()
                     }
@@ -70,6 +74,7 @@ class Transcription extends ModuleBase {
         if( this.gene.mode.catchUncaughtException ){
             this.uncaughtExceptionAction = (error) => {
                 let exception = error.stack ? error : error.error
+                this.root.createSystemStatus('uncaught exception', true, exception.message)
                 this.gene.mode.catchUncaughtException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
             }
             if( this.root.operating === 'node' ){
@@ -87,7 +92,8 @@ class Transcription extends ModuleBase {
             let index = 1
             let template = self.templates[0]
             if( self.gene.synthesis.initiation ){
-                self.gene.synthesis.initiation.bind(self.case)(self.root, self.bind.exit, self.bind.fail)
+                self.gene.synthesis.initiation.bind(self.case)(self.root, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
+                yield
             }
             while( index <= 10000 ){
                 if (self.finish) {
@@ -96,17 +102,22 @@ class Transcription extends ModuleBase {
                     if( template == null ){
                         self.bind.exit()
                     } else {
+                        let status = new Status(template.name, 'template')
+                        self.root.status.addChildren(status)
+                        self.root.setTargetStatus(status)
                         let next = () => {
                             next = null
                             template = self.templates[index++]
+                            status.set(true)
+                            self.root.setTargetStatus(null)
                             self.bind.next()
                         }
                         template.action.bind(self.case)(self.base, self.getSkill(), next, self.bind.exit, self.bind.fail)
                     }
                 }
-                yield;
+                yield
             }
-            return;
+            return
         }
         this.iterator = generator();
     }
@@ -116,8 +127,9 @@ class Transcription extends ModuleBase {
             io: this.bind.io,
             mixin: this.bind.mixin,
             methods: this.bind.methods,
-            polling: this.root.polling,
-            createFragment: this.root.createFragment
+            polling: this.bind.polling,
+            addBase: this.bind.addBase,
+            createFragment: this.bind.createFragment
         }
     }
 
@@ -136,10 +148,12 @@ class Transcription extends ModuleBase {
 
     mixin(gene, callback) {
         if (gene instanceof Gene) {
-            gene.translation().then((messenger) => {
+            gene.transcription().then((messenger) => {
+                this.root.status.addChildren(messenger.status)
                 callback(null, messenger)
             }, (messenger) => {
-                callback(messenger.getError(), messenger)
+                this.root.status.addChildren(messenger.status)
+                callback(messenger.getErrorMessage(), messenger)
             })
         } else {
             this.$systemError('mixin', 'Target not a gene module.', gene)
@@ -165,8 +179,8 @@ class Transcription extends ModuleBase {
         return mode
     }
 
-    close() {
-        this.root.close()
+    close(success, message) {
+        this.root.close(success, message)
         if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
             window.removeEventListener('error', this.uncaughtExceptionAction)
         }
@@ -183,8 +197,8 @@ class Transcription extends ModuleBase {
     fail(error) {
         if (this.finish === false) {
             this.finish = true
-            this.close()
-            this.reject(new Messenger(this.root, error))
+            this.close(false, error)
+            this.reject(new Messenger(this.root))
         }
     }
 
@@ -193,10 +207,10 @@ class Transcription extends ModuleBase {
      * @desc 成功並結束模板
      */
 
-    exit(){
+    exit(message){
         if (this.finish === false) {
             this.finish = true
-            this.close()
+            this.close(true, message)
             this.resolve(new Messenger(this.root))
         }
     }
@@ -212,7 +226,7 @@ class Transcription extends ModuleBase {
                 this.gene.synthesis.elongation(this.base, this.bind.exit, this.bind.fail)
             }
             setTimeout(()=>{
-                this.synthesis();
+                this.synthesis()
             }, 1)
         }
     }
@@ -227,6 +241,7 @@ class Transcription extends ModuleBase {
                 this.synthesisCatchUncaughtExceptionMode()
             } catch (exception) {
                 if (this.gene.mode.catchException) {
+                    this.root.createSystemStatus('error catch', true, exception.message)
                     this.gene.mode.catchException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
                 }
                 return false
@@ -239,10 +254,10 @@ class Transcription extends ModuleBase {
     synthesisCatchUncaughtExceptionMode(){
         if( this.gene.mode.catchUncaughtException && this.root.operating === "node" ){
             this.uncaughtExceptionDomain.run(() => {
-                this.iterator.next();
+                this.iterator.next()
             });
         } else {
-            this.iterator.next();
+            this.iterator.next()
         }
     }
 

@@ -7,12 +7,28 @@ class Root extends ModuleBase {
         this.base = {}
         this.delay = 10
         this.operating = typeof window === 'undefined' ? 'node' : 'browser'
+        this.rootStatus = new Status(this.name, 'root')
+        this.protection = {}
+        this.carryStatus = null
         this.pollingEvents = []
         this.init()
     }
 
+    get status() {
+        return this.carryStatus || this.rootStatus
+    }
+
+    setTargetStatus(status) {
+        this.carryStatus = status
+    }
+
+    createSystemStatus(name, success, message) {
+        let status = new Status(name, 'system')
+            status.set(success, message)
+        this.status.addChildren(status)
+    }
+
     init() {
-        this.status = new Status(this.name, 'root')
         this.initBase()
         this.initPolling()
     }
@@ -65,7 +81,7 @@ class Root extends ModuleBase {
     }
 
     polling(options) {
-        this.pollingEvents.push(new PollingEvent(options))
+        this.pollingEvents.push(new PollingEvent(this, options))
     }
 
     clearPollingEvents() {
@@ -79,7 +95,8 @@ class Root extends ModuleBase {
         return fragment.use()
     }
 
-    close() {
+    close(success, message) {
+        this.rootStatus.set(success, message)
         clearInterval(this.interval)
     }
 
@@ -87,11 +104,13 @@ class Root extends ModuleBase {
 
 class PollingEvent extends ModuleBase {
 
-    constructor(options) {
+    constructor(root, options) {
         super('PollingEvent')
         this.name = options.name
+        this.status = new Status(this.name, 'polling')
         this.action = options.action
         this.finish = false
+        root.status.addChildren(this.status)
     }
 
     activate() {
@@ -99,6 +118,7 @@ class PollingEvent extends ModuleBase {
     }
 
     close() {
+        this.status.set(true)
         this.finish = true
     }
 
@@ -108,11 +128,12 @@ class Fragment extends ModuleBase {
 
     constructor(root, name) {
         super('Fragment')
-        this.root = root
         this.over = 0
         this.name = name || 'no name'
         this.stop = false
+        this.status = new Status(this.name, 'fragment')
         this.thread = []
+        root.status.addChildren(this.status)
     }
 
     install(callback) {
@@ -133,20 +154,22 @@ class Fragment extends ModuleBase {
         }))
     }
 
-    regsterError() {
+    regsterError(status) {
         return (error) => {
             if( this.stop === false ){
+                status.set(false, error)
                 this.stop = true
                 this.callback(error)
             }
         }
     }
 
-    regsterOnload() {
+    regsterOnload(status) {
         return () => {
             this.over += 1
             if( this.stop === false ){
                 if( this.over >= this.thread.length ){
+                    status.set(true)
                     this.stop = true
                     this.callback()
                 }
@@ -156,8 +179,10 @@ class Fragment extends ModuleBase {
 
     actionThread(thread) {
         let func = async() => {
-            let onload = this.regsterOnload()
-            let error = this.regsterError()
+            let status = new Status(thread.name, 'thread')
+            let onload = this.regsterOnload(status)
+            let error = this.regsterError(status)
+            this.status.addChildren(status)
             thread.action(error, onload)
         }
         func()

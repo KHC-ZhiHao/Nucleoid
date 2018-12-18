@@ -61,7 +61,7 @@ class ModuleBase {
                 this.$systemError('protection', "This key is a private key, can't be change.", key );
             },
             get: ()=>{
-                return getter[key];
+                return getter[key]
             },
         })
     }

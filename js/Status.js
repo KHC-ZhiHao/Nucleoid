@@ -4,7 +4,6 @@ class Status extends ModuleBase{
         super("Status")
         this.name = name || 'no name'
         this.type = type || 'no type'
-        this.cache = null
         this.message = ''
         this.success = false
         this.children = []
@@ -16,18 +15,13 @@ class Status extends ModuleBase{
         return (this.finishTime || Date.now()) - this.startTime
     }
 
-    success() {
-        this.set(true)
-    }
-
-    error(message) {
-        this.set(false, message)
-    }
-
     set(success, message = '') {
-        this.success = success
-        this.message = message
-        this.finishTime = Date.now()
+        if (this.finishTime == null) {
+            this.success = success
+            this.message = message
+            this.finishTime = Date.now()
+        }
+        return this
     }
 
     get() {
@@ -49,9 +43,9 @@ class Status extends ModuleBase{
         return JSON.stringify(this.get(), null, 4)
     }
 
-    addChildren(status, target = this.children) {
+    addChildren(status) {
         if (status instanceof Status) {
-            target.push(status)
+            this.children.push(status)
         } else {
             this.$systemError('addChildren', 'Child not a status class.', status)
         }
