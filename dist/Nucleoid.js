@@ -334,11 +334,16 @@ class Status extends ModuleBase{
         this.success = false
         this.children = []
         this.startTime = Date.now()
+        this.attributes = {}
         this.finishTime = null
     }
 
     get operationTime() {
         return (this.finishTime || Date.now()) - this.startTime
+    }
+
+    addAttr(key, value) {
+        this.attributes[key] = value
     }
 
     set(success, message = '') {
