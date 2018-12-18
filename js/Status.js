@@ -36,6 +36,7 @@ class Status extends ModuleBase{
             message: this.message,
             success: this.success,
             children: [],
+            attributes: this.attributes,
             operationTime: this.operationTime
         }
         for (let child of this.children) {
