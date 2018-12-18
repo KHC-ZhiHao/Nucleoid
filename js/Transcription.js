@@ -92,7 +92,7 @@ class Transcription extends ModuleBase {
             let index = 1
             let template = self.templates[0]
             if( self.gene.synthesis.initiation ){
-                self.gene.synthesis.initiation.bind(self.case)(self.root, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
+                self.gene.synthesis.initiation.bind(self.case)(self.base, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
                 yield
             }
             while( index <= 10000 ){
