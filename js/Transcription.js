@@ -40,7 +40,7 @@ class Transcription extends ModuleBase {
             exit: this.exit.bind(this),
             fail: this.fail.bind(this),
             next: this.next.bind(this),
-            mixin: this.mixin.bind(this),
+            cross: this.cross.bind(this),
             methods: this.methods.bind(this),
             addBase: this.root.addBase.bind(this.root),
             polling: this.root.polling.bind(this.root),
@@ -125,7 +125,7 @@ class Transcription extends ModuleBase {
     getSkill() {
         return {
             io: this.bind.io,
-            mixin: this.bind.mixin,
+            cross: this.bind.cross,
             methods: this.bind.methods,
             polling: this.bind.polling,
             addBase: this.bind.addBase,
@@ -146,7 +146,7 @@ class Transcription extends ModuleBase {
         return this.bioreactor.getCurriedFunction(groupName, name).use()
     }
 
-    mixin(gene, callback) {
+    cross(gene, callback) {
         if (gene instanceof Gene) {
             gene.transcription().then((messenger) => {
                 this.root.status.addChildren(messenger.status)
@@ -156,7 +156,7 @@ class Transcription extends ModuleBase {
                 callback(messenger.getErrorMessage(), messenger)
             })
         } else {
-            this.$systemError('mixin', 'Target not a gene module.', gene)
+            this.$systemError('cross', 'Target not a gene module.', gene)
         }
     }
 
