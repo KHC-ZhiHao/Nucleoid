@@ -1126,7 +1126,7 @@ class Transcription extends ModuleBase {
             window.removeEventListener('error', this.uncaughtExceptionAction)
         }
         if (this.gene.synthesis.termination) {
-            this.gene.synthesis.termination.bind(this.case)(this.base, this.status);
+            this.gene.synthesis.termination.bind(this.case)(this.base, this.root.rootStatus);
         }
     }
 
