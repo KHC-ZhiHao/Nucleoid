@@ -33,22 +33,36 @@ class ModuleBase {
      * @desc 於console呼叫錯誤，中斷程序並顯示錯誤的物件
      */
 
-    $systemError( functionName, message, object = '$_no_error' ){
+    $systemError(functionName, message, object = '$_no_error'){
         if( object !== '$_no_error' ){
-            console.log( `%c error : `, 'color:#FFF; background:red' );
-            console.log( object );
+            console.log( `%c error : `, 'color:#FFF; background:red' )
+            console.log( object )
         }
-        throw new Error( `(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}` );
+        throw new Error(`(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}`)
     }
 
+    /**
+     * @function $noKey(functionName,target,key)
+     * @desc 檢查該物件是否含有key
+     * @returns {boolean} 如果沒有，回傳true，如果有則報錯
+     */
+
     $noKey( functionName, target, key ) {
-        if( target[key] == null ){
+        if (target[key] == null) {
             return true;
         } else {
             this.$systemError( functionName, 'Name already exists.', key );
             return false;
         } 
     }
+
+    /**
+     * @function $verify(data,validate,assign)
+     * @desc 驗證並返為一個新的物件，並在空屬性中賦予預設屬性
+     * @param {object} data 驗證目標
+     * @param {object} validate 驗證物件，value是一個array，內容是[require,default]
+     * @param {object} assign 返回的物件與指定物件合併
+     */
 
     $verify(data, validate, assign = {}) {
         let newData = {}
@@ -71,6 +85,15 @@ class ModuleBase {
         return Object.assign(newData, assign);
     }
 
+    /**
+     * @function $protection(object,key,getter,value)
+     * @desc 建立一個保護變數
+     * @param {*} object 保護變數必須要有一個目標物件
+     * @param {*} key 為目標物建立一個key
+     * @param {*} getter 這個保護變數被存入的外部物件
+     * @param {*} value 變數值
+     */
+
     $protection(object, key, getter, value) {
         getter[key] = value
         Object.defineProperty( object, key, {
@@ -86,6 +109,172 @@ class ModuleBase {
 }
 
 class Case {}
+
+/**
+ * @class PollingEvent(root,options)
+ * @desc 輪循的事件單位
+ */
+
+class PollingEvent extends ModuleBase {
+
+    constructor(root, options) {
+        super('PollingEvent')
+        this.name = options.name
+        this.status = new Status(this.name, 'polling')
+        this.action = options.action
+        this.finish = false
+        root.status.addChildren(this.status)
+    }
+
+    /**
+     * @function activate()
+     * @desc 每次輪循呼叫一次action
+     */
+
+    activate() {
+        this.action(this.close.bind(this))
+    }
+
+    /**
+     * @function close()
+     * @desc 關閉這個事件，他將在下次輪循時被移除
+     */
+
+    close() {
+        this.status.set(true)
+        this.finish = true
+    }
+
+}
+
+/**
+ * @class Fragment(root,name)
+ * @desc 建立一個片段，你可以一次加入多個排程，他將會同時進行並等待回傳onload
+ */
+
+class Fragment extends ModuleBase {
+
+    constructor(root, name) {
+        super('Fragment')
+        this.over = 0
+        this.name = name || 'no name'
+        this.stop = false
+        this.status = new Status(this.name, 'fragment')
+        this.thread = []
+        root.status.addChildren(this.status)
+    }
+
+    /**
+     * @function install(callback)
+     * @desc 執行activate時初始化
+     */
+
+    install(callback) {
+        this.callback = callback
+    }
+
+    /**
+     * @function use()
+     * @desc 建立對外接口
+     */
+
+    use() {
+        return {
+            add: this.add.bind(this),
+            activate: this.activate.bind(this)
+        }
+    }
+
+    /**
+     * @function add(options)
+     * @public
+     * @desc 加入一個排程
+     * @param {object} options {name:string, action:function} 
+     */
+
+    add(options) {
+        this.thread.push(this.$verify(options, {
+            name: [true, '#string'],
+            action: [true, '#function'] 
+        }))
+    }
+
+    /**
+     * @function regsterError(status)
+     * @desc 註冊每個排程的error事件
+     */
+
+    regsterError(status) {
+        return (error) => {
+            if( this.stop === false ){
+                status.set(false, error)
+                this.stop = true
+                this.callback(error || 'unknown error')
+            }
+        }
+    }
+
+    /**
+     * @function regsterOnload(status)
+     * @desc 註冊每個排程的onload事件
+     */
+
+    regsterOnload(status) {
+        return () => {
+            this.over += 1
+            if( this.stop === false ){
+                if( this.over >= this.thread.length ){
+                    status.set(true)
+                    this.stop = true
+                    this.callback()
+                }
+            }
+        }
+    }
+
+    /**
+     * @function actionThread(thread)
+     * @desc 執行一個排程
+     */
+
+    actionThread(thread) {
+        let func = async() => {
+            let status = new Status(thread.name, 'thread')
+            let onload = this.regsterOnload(status)
+            let error = this.regsterError(status)
+            this.status.addChildren(status)
+            thread.action(error, onload)
+        }
+        func()
+    }
+
+    /**
+     * @function activate(callback)
+     * @public
+     * @callback (error,onload)
+     */
+
+    activate(callback) {
+        let length = this.thread.length
+        this.install(callback)
+        for (let i = 0; i < length; i++) {
+            this.actionThread(this.thread[i])
+        }
+        if( length === 0 ){
+            this.callback(null)
+        }
+        this.activate = () => {
+            this.$systemError('activate', `This template(${this.name}) already  called`)
+        }
+    }
+
+}
+
+/**
+ * @class Root
+ * @desc Gene執行Transcription時，掌控Status和Polling的源頭
+ */
+
 class Root extends ModuleBase {
 
     constructor(gene) {
@@ -99,38 +288,18 @@ class Root extends ModuleBase {
         this.protection = {}
         this.carryStatus = null
         this.pollingEvents = []
-        this.init()
+        this.initBase()
+        this.initPolling()
     }
 
     get status() {
         return this.carryStatus || this.rootStatus
     }
 
-    getBase() {
-        let base = {}
-        for (let key in this.base) {
-            base[key] = this.base[key]
-        }
-        for (let key in this.protection) {
-            base[key] = this.protection[key]
-        }
-        return base 
-    }
-
-    setTargetStatus(status) {
-        this.carryStatus = status
-    }
-
-    createSystemStatus(name, success, message) {
-        let status = new Status(name, 'system')
-            status.set(success, message)
-        this.status.addChildren(status)
-    }
-
-    init() {
-        this.initBase()
-        this.initPolling()
-    }
+    /**
+     * @function initPolling()
+     * @desc 初始化輪尋機制
+     */
 
     initPolling() {
         this.interval = setInterval(() => {
@@ -149,6 +318,11 @@ class Root extends ModuleBase {
         }, this.delay)
     }
 
+    /**
+     * @function initBase()
+     * @desc 初始化鹼基
+     */
+
     initBase() {
         if (this.gene.genetic) {
             let datas = this.gene.genetic()
@@ -160,6 +334,43 @@ class Root extends ModuleBase {
                 this.$systemError('initBase', 'Genetic retrun not a object', datas)
             }
         }
+    }
+
+    /**
+     * @function getBase()
+     * @desc 直接獲取base是不會得到protection物件的
+     */
+
+    getBase() {
+        let base = {}
+        for (let key in this.base) {
+            base[key] = this.base[key]
+        }
+        for (let key in this.protection) {
+            base[key] = this.protection[key]
+        }
+        return base 
+    }
+
+    /**
+     * @function setTargetStatus(status)
+     * @desc 轉移指定的status對象
+     * @param {Status} status 
+     */
+
+    setTargetStatus(status) {
+        this.carryStatus = status
+    }
+
+    /**
+     * @function createSystemStatus(name,success,message)
+     * @desc 快捷建立一個status至指定的對象中
+     */
+
+    createSystemStatus(name, success, message) {
+        let status = new Status(name, 'system')
+            status.set(success, message)
+        this.status.addChildren(status)
     }
 
     /**
@@ -179,9 +390,20 @@ class Root extends ModuleBase {
         }
     }
 
+    /**
+     * @function polling(options)
+     * @desc 輪循一個事件
+     * @param {object} options {name:string, action:function} 
+     */
+
     polling(options) {
         this.pollingEvents.push(new PollingEvent(this, options))
     }
+
+    /**
+     * @function clearPollingEvents()
+     * @desc 清空宣告停止輪循的事件
+     */
 
     clearPollingEvents() {
         this.pollingEvents = this.pollingEvents.filter((d) => {
@@ -189,116 +411,26 @@ class Root extends ModuleBase {
         })
     }
 
+    /**
+     * @function createFragment(name)
+     * @desc 建立一個片段
+     */
+
     createFragment(name) {
         let fragment = new Fragment(this, name)
         return fragment.use()
     }
 
+    /**
+     * @function close(success,message)
+     * @desc 完成Transcription後，關閉系統
+     * @param {boolean} success 系統是否順利結束
+     * @param {any} message 如果錯誤，是怎樣的錯誤
+     */
+
     close(success, message) {
         this.rootStatus.set(success, message)
         clearInterval(this.interval)
-    }
-
-}
-
-class PollingEvent extends ModuleBase {
-
-    constructor(root, options) {
-        super('PollingEvent')
-        this.name = options.name
-        this.status = new Status(this.name, 'polling')
-        this.action = options.action
-        this.finish = false
-        root.status.addChildren(this.status)
-    }
-
-    activate() {
-        this.action(this.close.bind(this))
-    }
-
-    close() {
-        this.status.set(true)
-        this.finish = true
-    }
-
-}
-
-class Fragment extends ModuleBase {
-
-    constructor(root, name) {
-        super('Fragment')
-        this.over = 0
-        this.name = name || 'no name'
-        this.stop = false
-        this.status = new Status(this.name, 'fragment')
-        this.thread = []
-        root.status.addChildren(this.status)
-    }
-
-    install(callback) {
-        this.callback = callback
-    }
-
-    use() {
-        return {
-            add: this.add.bind(this),
-            activate: this.activate.bind(this)
-        }
-    }
-
-    add(options) {
-        this.thread.push(this.$verify(options, {
-            name: [true, '#string'],
-            action: [true, '#function'] 
-        }))
-    }
-
-    regsterError(status) {
-        return (error) => {
-            if( this.stop === false ){
-                status.set(false, error)
-                this.stop = true
-                this.callback(error || 'unknown error')
-            }
-        }
-    }
-
-    regsterOnload(status) {
-        return () => {
-            this.over += 1
-            if( this.stop === false ){
-                if( this.over >= this.thread.length ){
-                    status.set(true)
-                    this.stop = true
-                    this.callback()
-                }
-            }
-        }
-    }
-
-    actionThread(thread) {
-        let func = async() => {
-            let status = new Status(thread.name, 'thread')
-            let onload = this.regsterOnload(status)
-            let error = this.regsterError(status)
-            this.status.addChildren(status)
-            thread.action(error, onload)
-        }
-        func()
-    }
-
-    activate(callback) {
-        let length = this.thread.length
-        this.install(callback)
-        for (let i = 0; i < length; i++) {
-            this.actionThread(this.thread[i])
-        }
-        if( length === 0 ){
-            this.callback(null)
-        }
-        this.activate = () => {
-            this.$systemError('activate', `This template(${this.name}) already  called`)
-        }
     }
 
 }
@@ -314,13 +446,31 @@ class Messenger {
         this.getBase = root.getBase
     }
 
+    /**
+     * @function isError()
+     * @desc 是否為執行錯誤的Messenger
+     * @returns {boolean}
+     */
+
     isError() {
         return !this.success
     }
 
+    /**
+     * @function getErrorMessage()
+     * @desc 獲取錯誤訊息
+     * @returns {string|null}
+     */
+
     getErrorMessage() {
         return this.isError ? this.status.message : null
     }
+
+    /**
+     * @function getStatusToJson()
+     * @desc 獲取狀態並轉換成json格式
+     * @returns {string} json file
+     */
 
     getStatusToJson() {
         return this.status.json()
@@ -329,6 +479,7 @@ class Messenger {
     /**
      * @function getMethods()
      * @desc 獲取模式
+     * @returns {array}
      */
 
     getMode(){
@@ -348,8 +499,12 @@ class Messenger {
         return mode
     }
 
-
 }
+/**
+ * @class Status()
+ * @desc 堆棧狀態
+ */
+
 class Status extends ModuleBase{
 
     constructor(name, type) {
@@ -368,9 +523,19 @@ class Status extends ModuleBase{
         return (this.finishTime || Date.now()) - this.startTime
     }
 
+    /**
+     * @function addAttr(key,value)
+     * @desc 這個屬性會被加入在一個名為attributes的物件內
+     */
+
     addAttr(key, value) {
         this.attributes[key] = value
     }
+
+    /**
+     * @function set(success,message)
+     * @desc 當該狀態的模式進行到一個終點，設定成功與否和訊息
+     */
 
     set(success, message = '') {
         if (this.finishTime == null) {
@@ -380,6 +545,11 @@ class Status extends ModuleBase{
         }
         return this
     }
+
+    /**
+     * @function get()
+     * @desc 取得該狀態序列化的參數
+     */
 
     get() {
         let data = {
@@ -397,9 +567,19 @@ class Status extends ModuleBase{
         return data
     }
 
+    /**
+     * @function json()
+     * @desc 取得序列化參數並轉呈json文本
+     */
+
     json() {
         return JSON.stringify(this.get(), null, 4)
     }
+
+    /**
+     * @function addChildren(status)
+     * @desc 將該status加入一個子狀態
+     */
 
     addChildren(status) {
         if (status instanceof Status) {
@@ -410,360 +590,12 @@ class Status extends ModuleBase{
     }
 
 }
-class Curry extends ModuleBase {
-
-    constructor(options, group) {
-        super("Curry");
-        this.group = group;
-        this.data = this.$verify(options, {
-            name: [true, ''],
-            input: [true, '#function'],
-            output: [true, '#function'],
-            opener: [false, []],
-            methods: [true, {}]
-        })
-        this.opener = this.data.opener || null
-        this.methods = {}
-        this.checkPrivateKey()
-    }
-
-    get name() { return this.data.name }
-
-    checkPrivateKey() {
-        let methods = this.data.methods
-        if( methods.action || methods.promise ){
-            this.$systemError('init', 'Methods has private key(action, promise)')
-        }
-    }
-
-    use() {
-        let self = this
-        return function() {
-            let unit = new CurryUnit(self, [...arguments]);
-            return unit.getRegisterMethod();
-        }
-    }
-
-}
-
-class CurryUnit extends ModuleBase {
-
-    constructor(main, params) {
-        super("CurryUnit")
-        this.case = new Case()
-        this.flow = []
-        this.main = main
-        this.index = 0
-        this.params = params
-        this.methods = {}
-        this.previousFlow = null
-        this.initRegisterMethod()
-    }
-
-    initRegisterMethod() {
-        let self = this;
-        this.registergMethod = {
-            action: this.action.bind(this),
-            promise: this.promise.bind(this)
-        }
-
-        let input = new Method({
-            name: 'input',
-            action: this.main.data.input
-        }, this.main.group)
-
-        let output = new Method({
-            name: 'output',
-            action: this.main.data.output
-        }, this.main.group)
-
-        this.input = input.turn(this.case).use()
-        this.output = output.turn(this.case).use()
-
-        for (let name in this.main.data.methods) {
-            this.methods[name] = new Method({
-                name: name,
-                action: this.main.data.methods[name]
-            }, this.main.group)
-            this.registergMethod[name] = function() {
-                self.register(name, [...arguments])
-                return self.getRegisterMethod()
-            }
-        }
-    }
-
-    getRegisterMethod() {
-        return this.registergMethod
-    }
-
-    register(name, params) {
-        if (this.main.opener.length !== 0 && this.flow.length === 0) {
-            if (!this.main.opener.includes(name)) {
-                this.$systemError('register', 'First call method not inside opener.', name)
-            }
-        }
-        let data = {
-            name: name,
-            nextFlow: null,
-            previous: this.flow.slice(-1),
-            index: this.index,
-            method: this.methods[name].turn(this.case).use(),
-            params: params
-        }
-        if( this.previousFlow ){
-            this.previousFlow.nextFlow = data
-        }
-        this.previousFlow = data
-        this.index += 1
-        this.flow.push(data)
-    }
-
-    include(name) {
-        return this.main.group.getMethod(name).use()
-    }
-
-    action(callback) {
-        let error = function(error){ callback(error || 'unknown error', null) }
-        let success = function(success) { callback(null, success) }
-        this.activation( error, success )
-    }
-
-    promise() {
-        return new Promise(( resolve, reject )=>{
-            this.activation( reject, resolve )
-        })
-    }
-
-    activation(error, success) {
-        let stop = false
-        let index = 0
-        let run = () => {
-            let flow = this.flow[index]
-            if( flow ){
-                flow.method.action(...flow.params, (err) => {
-                    if (err) {
-                        error(err)
-                        stop = true
-                    } else {
-                        index += 1
-                        if( stop === false ){ run() }
-                    }
-                })
-            } else {
-                this.output.action((err, result) => {
-                    if (err) {
-                        error(err)
-                    } else {
-                        success(result)
-                    }
-                })
-            }
-        }
-        this.input.action(...this.params, (err) => {
-            if (err) {
-                error(err)
-            } else {
-                run()
-            }
-        })
-    }
-
-}
-
-class MethodGroup extends ModuleBase {
-
-    constructor(options = {}) {
-        super("MethodGroup")
-        this.case = new Case()
-        this.pool = {}
-        this.curriedPool = {}
-        this.data = this.$verify(options, {
-            create: [false, function(){}]
-        })
-    }
-
-    create(options){
-        this.data.create.bind(this.case)(options)
-        this.create = null;
-    }
-
-    // get
-
-    getMethod(name) {
-        if( this.pool[name] ){
-            return this.pool[name]
-        } else {
-            this.$systemError('getMethod', 'method not found.', name)
-        }
-    }
-
-    getCurriedFunction(name) {
-        if( this.curriedPool[name] ){
-            return this.curriedPool[name]
-        } else {
-            this.$systemError('getCurry', 'curry not found.', name)
-        }
-    }
-
-    // compile
-
-    currying(options){
-        let curry = new Curry(options, this)
-        if( this.$noKey('currying', this.curriedPool, curry.name ) ){
-            this.curriedPool[curry.name] = curry
-        }
-    }
-
-    addMethod(options) {
-        let method = new Method(options, this)
-        if( this.$noKey('addMethod', this.pool, method.name ) ){
-            this.pool[method.name] = method
-        }
-    }
-
-    // has
-
-    hasCurry(name) {
-        return !!this.curriedPool[name]
-    }
-
-    hasMethod(name) {
-        return !!this.pool[name]
-    }
-
-}
-class Method extends ModuleBase {
-    
-    constructor(options = {}, group) {
-        super('Method')
-        this.id = 0
-        this.case = new Case()
-        this.used = []
-        this.store = {}
-        this.group = group
-        this.data = this.$verify( options, {
-            name : [true , ''],
-            create : [false, function(){}],
-            action : [true , '#function'],
-            allowDirect : [false , true]
-        })
-        this.argumentLength = this.data.action.length
-        if( this.group == null ){
-            this.$systemError('init', 'No has group', this)
-        }
-    }
-
-    get name() { return this.data.name }
-    get groupCase() { return this.group.case }
-
-    turn(target) {
-        this.case = target
-        return this
-    }
-
-    install() {
-        this.initBindData()
-        this.data.create.bind(this.case)(this.bind.create)
-        this.install = null
-    }
-
-    initBindData() {
-        this.bind = {
-            create: {
-                store: this.store,
-                include: this.include.bind(this),
-            },
-            system: {
-                store: this.store,
-                group: this.groupCase,
-                include: this.include.bind(this),
-            },
-            action: this.data.action.bind(this.case)
-        }
-    }
-
-    createLambda(func, type) {
-        let self = this
-        return function () {
-            let params = [...arguments]
-            let callback = null
-            if (type === 'action') {
-                if (typeof params.slice(-1)[0] === 'function') {
-                    callback = params.pop()
-                } else {
-                    self.$systemError('createLambda', 'Action must callback, no need? try direct!')
-                }
-            }
-            let args = new Array(self.argumentLength - 3)
-            for (let i = 0; i < args.length; i++) {
-                args[i] = params[i]
-            }
-            return func.bind(self)(args, callback)
-        }
-    }
-
-    include(name) {
-        return this.group.getMethod(name).use()
-    }
-
-    direct(params){
-        if (this.data.allowDirect === false) {
-            this.$systemError('direct', 'Not allow direct.', this.data.name)
-        }
-        let output = null
-        let error = function(error) {
-            throw new Error(error || 'unknown error')
-        }
-        let success = function(data) {
-            output = data
-        }
-        this.bind.action(...params, this.bind.system, error, success);
-        return output
-    }
-
-    action(params, callback = function() {}) {
-        let error = function(error){
-            callback(error || 'unknown error', null);
-        }
-        let success = function(success) {
-            callback(null, success);
-        }
-        this.bind.action(...params, this.bind.system, error, success);
-    }
-
-    promise(params) {
-        return new Promise((resolve, reject)=>{
-            this.bind.action(...params, this.bind.system, resolve, reject);
-        })
-    }
-
-    getStore(key) {
-        if (this.store[key]) {
-            return this.store[key]
-        } else {
-            this.$systemError('getStore', 'Key not found.', key)
-        }
-    }
-
-    use() {
-        if (this.install) {
-            this.install()
-        }
-        return {
-            store: this.getStore.bind(this),
-            direct: this.createLambda(this.direct),
-            action: this.createLambda(this.action, 'action'),
-            promise: this.createLambda(this.promise)
-        }
-    }
-
-}
+/**
+ * @class Gene(name)
+ * @desc 建立貯列模板與生命週期，為整體流程控制的最高物件
+ */
 
 class Gene extends ModuleBase {
-
-    /**
-     * @member {object} genetic 預註冊的屬性，每次建立messenger會同步複製
-     */
 
     constructor(name){
         super("Gene")
@@ -792,9 +624,15 @@ class Gene extends ModuleBase {
         if( typeof name === "string" ){
             this.name = name;
         } else {
-            this.$systemError( 'setName', 'Name not a string.', name );
+            this.$systemError('setName', 'Name not a string.', name)
         }
     }
+
+    /**
+     * @function setTraceBaseMode(enable,action)
+     * @desc 鹼基追蹤模式，將每個template的鹼基變化紀錄下來，注意!這功能將強暴你的效能!
+     * @param {function} action (cloneBase, nowStatus)
+     */
 
     setTraceBaseMode(enable, action) {
         if (typeof enable === "boolean" && typeof action === "function") {
@@ -802,13 +640,14 @@ class Gene extends ModuleBase {
                 this.mode.traceBase = { action }
             }
         } else {
-            this.$systemError( 'setTraceBaseMode', 'Params type error. try setTraceBaseMode(boolean, function)' );
+            this.$systemError('setTraceBaseMode', 'Params type error. try setTraceBaseMode(boolean, function)')
         }
     }
 
     /** 
      * @function setTimeoutMode(enable,millisecond,action)
      * @desc 設定逾時事件
+     * @param {function} action (base, exit, fail)
      */
 
     setTimeoutMode(enable, millisecond, action) {
@@ -817,16 +656,17 @@ class Gene extends ModuleBase {
                 this.mode.timeout = { action, millisecond }
             }
         } else {
-            this.$systemError( 'setTimeout', 'Params type error. try setTimeoutMode(boolean, number, function)' );
+            this.$systemError('setTimeout', 'Params type error. try setTimeoutMode(boolean, number, function)')
         }
     }
 
     /** 
      * @function setCatchExceptionMode(enable,action)
      * @desc 設定捕捉Exception模式
+     * @param {function} action (base, exception, exit, fail)
      */
 
-    setCatchExceptionMode( enable, action ){
+    setCatchExceptionMode(enable, action){
         if (typeof enable === "boolean" && typeof action === "function") {
             if (enable) {
                 this.mode.catchException = { action }
@@ -839,9 +679,10 @@ class Gene extends ModuleBase {
     /**
      * @function setCatchUncaughtExceptionMode(enable,action)
      * @desc 設定捕捉未捕獲Exception模式
+     * @param {function} action (base, exception, exit, fail)
      */
 
-    setCatchUncaughtExceptionMode( enable, action ) {
+    setCatchUncaughtExceptionMode(enable, action) {
         if (typeof enable === "boolean" && typeof action === "function") {
             if (enable) {
                 this.mode.catchUncaughtException = { action }
@@ -850,6 +691,11 @@ class Gene extends ModuleBase {
             this.$systemError('setCatchUncaughtException', 'Params type error, try setCatchUncaughtException(boolean, function).')
         }
     }
+
+    /**
+     * @function setGenetic(callback)
+     * @desc 設定遺傳，callback必須回傳一個物件，他將在你執行transcription時將回傳的值賦予base中
+     */
 
     setGenetic(callback){
         if (typeof callback === "function") {
@@ -861,20 +707,21 @@ class Gene extends ModuleBase {
 
     /**
      * @function template(name,action)
-     * @desc 加入一個貯列模板
+     * @desc 加入一個貯列模版，他將在執行transcription時依宣告順序執行
      */
 
-    template( name, action ) {
+    template(name, action) {
         if( typeof name === 'string' && typeof action === 'function' ){
             this.templates.push({ name, action })
         } else {
-            this.$systemError( 'template', 'Params type error, try template(string, function).' );
+            this.$systemError('template', 'Params type error, try template(string, function).')
         }
     }
 
     /** 
      * @function setInitiation(initiation)
-     * @desc 設定啟動事件
+     * @desc 設定啟動事件，此事件猶如定義為一個template，必須宣告next才能繼續運行
+     * @param {function} initiation (base, skill, next, exit, fail)
      */
 
     setInitiation(initiation) {
@@ -887,7 +734,8 @@ class Gene extends ModuleBase {
 
     /** 
      * @function setElongation(elongation)
-     * @desc 設定延長事件
+     * @desc 設定延長事件，自動過渡，沒有next也無法處裡非同步資源
+     * @param {function} elongation (base, exit, fail)
      */
 
     setElongation(elongation) {
@@ -901,6 +749,7 @@ class Gene extends ModuleBase {
     /** 
      * @function setTermination(termination)
      * @desc 設定結束事件
+     * @param {function} termination (base, rootStatus)
      */
 
     setTermination(termination) {
@@ -913,7 +762,7 @@ class Gene extends ModuleBase {
 
     /** 
      * @function transcription()
-     * @desc 執行系統
+     * @desc 執行系統，不論錯誤或成功皆會回傳一個Messenger物件
      * @returns {Promise}
      */
 
@@ -924,62 +773,6 @@ class Gene extends ModuleBase {
     }
 
 }
-
-class BioreactorBase extends ModuleBase {
-
-    constructor() {
-        super("Bioreactor")
-        this.groups = {};
-    }
-
-    // Get
-
-    getGroup(name) {
-        return this.groups[name]
-    }
-
-    getMethod(groupName, name) {
-        return this.getGroup(groupName).getMethod(name)
-    }
-
-    getCurriedFunction(groupName, name) {
-        return this.getGroup(groupName).getCurriedFunction(name)
-    }
-
-    // Add
-
-    addGroup(name, group, options) {
-        if( this.groups[name] == null ) {
-            if (group instanceof MethodGroup) {
-                if (group.create) {
-                    group.create(options)
-                }
-                this.groups[name] = group
-            } else {
-                this.$systemError('addGroup', 'Must group.', group)
-            }
-        } else {
-            this.$systemError('addGroup', 'Name already exists.', name)
-        }
-    }
-
-    // Has
-
-    hasGroup(name) {
-        return !!this.groups[name]
-    }
-
-    hasMethod(groupName, name) {
-        return !!this.getGroup(groupName).hasMethod(name)
-    }
-
-    hasCurriedFunction(groupName, name) {
-        return !!this.getGroup(groupName).hasCurriedFunction(name)
-    }
-
-}
-
-let Bioreactor = new BioreactorBase()
 
 /**
  * @class Transcription(gene)
@@ -997,7 +790,6 @@ class Transcription extends ModuleBase {
         this.reject = reject
         this.resolve = resolve
         this.templates = this.gene.templates
-        this.bioreactor = Bioreactor
         this.init()
         this.synthesis()
     }
@@ -1019,12 +811,10 @@ class Transcription extends ModuleBase {
 
     initBind() {
         this.bind = {
-            io: this.io.bind(this),
             exit: this.exit.bind(this),
             fail: this.fail.bind(this),
             next: this.next.bind(this),
             cross: this.cross.bind(this),
-            methods: this.methods.bind(this),
             addBase: this.root.addBase.bind(this.root),
             polling: this.root.polling.bind(this.root),
             createFragment: this.root.createFragment.bind(this.root)
@@ -1034,17 +824,10 @@ class Transcription extends ModuleBase {
     initTimeoutMode() {
         if (this.gene.mode.timeout) {
             let system = this.gene.mode.timeout
-            let params = {
-                name: 'timeout',
-                action: (finish) => {
-                    if (this.root.status.operationTime > system.millisecond) {
-                        this.root.createSystemStatus('timeout', true)
-                        system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
-                        finish()
-                    }
-                }
-            }
-            this.root.polling(params)
+            setTimeout(() => {
+                this.root.createSystemStatus('timeout', true)
+                system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
+            }, system.millisecond)
         }
     }
 
@@ -1068,6 +851,11 @@ class Transcription extends ModuleBase {
             }
         }
     }
+
+    /**
+     * @function initGenerator()
+     * @desc 初始化一個生成器
+     */
 
     initGenerator(){
         let self = this
@@ -1105,43 +893,57 @@ class Transcription extends ModuleBase {
         this.iterator = generator();
     }
 
-    deepClone(obj, hash = new WeakMap()) {
-        if (Object(obj) !== obj) return obj
-        if (obj instanceof Set) return new Set(obj)
-        if (hash.has(obj)) return hash.get(obj)
-        const result = obj instanceof Date ? new Date(obj)
-                     : obj instanceof RegExp ? new RegExp(obj.source, obj.flags)
-                     : Object.create(null)
+    /**
+     * @function deepClone(obj)
+     * @desc 深拷貝一個物件，並回傳此物件
+     */
+
+    deepClone(obj) {
+        let hash = new WeakMap()
+        if (Object(obj) !== obj) {
+            return obj
+        }
+        if (obj instanceof Set) {
+            return new Set(obj)
+        }
+        if (hash.has(obj)) {
+            return hash.get(obj)
+        }
+        const result = obj instanceof Date ? new Date(obj) : obj instanceof RegExp ? new RegExp(obj.source, obj.flags) : Object.create(null)
         hash.set(obj, result)
-        if (obj instanceof Map)
-            Array.from(obj, ([key, val]) => result.set(key, this.deepClone(val, hash)) )
-        return Object.assign(result, ...Object.keys(obj).map (
-            key => ({ [key]: this.deepClone(obj[key], hash) }) ))
+        if (obj instanceof Map) {
+            Array.from(obj, ([key, val]) => {
+                result.set(key, this.deepClone(val, hash))
+            })
+        }
+        return Object.assign(result, ...Object.keys(obj).map((key) => {
+            return ({
+                [key]: this.deepClone(obj[key], hash)
+            })
+        }))
     }
+
+    /**
+     * @function getSkill()
+     * @desc 獲取可用技能
+     * @returns {cross, polling, addBase, deepClone, createFragment}
+     */
 
     getSkill() {
         return {
-            io: this.bind.io,
             cross: this.bind.cross,
-            methods: this.bind.methods,
             polling: this.bind.polling,
             addBase: this.bind.addBase,
+            deepClone: this.deepClone,
             createFragment: this.bind.createFragment
         }
     }
 
     /**
-     * @function method()
-     * @desc 獲取使用的模塊
+     * @function cross(gene,callback)
+     * @desc 有時不免俗需要抽出邏輯層，cross可以讓你呼叫外部基因並疊加狀態
+     * @callback (error,messenger)
      */
-
-    methods(groupName, name){
-        return this.bioreactor.getMethod(groupName, name).use()
-    }
-
-    io(groupName, name){
-        return this.bioreactor.getCurriedFunction(groupName, name).use()
-    }
 
     cross(gene, callback) {
         if (gene instanceof Gene) {
@@ -1156,6 +958,11 @@ class Transcription extends ModuleBase {
             this.$systemError('cross', 'Target not a gene module.', gene)
         }
     }
+
+    /**
+     * @function close(success,message)
+     * @desc 不論是fail或exit都會處裡的邏輯層
+     */
 
     close(success, message) {
         this.root.close(success, message)
@@ -1212,9 +1019,19 @@ class Transcription extends ModuleBase {
         }
     }
 
+    /**
+     * @function synthesis()
+     * @desc TryCatch與CatchUncaughtException其實需要一個統一的傳遞街口
+     */
+
     synthesis(){
         this.synthesisTryCatchMode()
     }
+
+    /**
+     * @function synthesisTryCatchMode()
+     * @desc 開啟TryCatch模式
+     */
 
     synthesisTryCatchMode(){
         if( this.gene.mode.catchException ){
@@ -1232,6 +1049,11 @@ class Transcription extends ModuleBase {
         }
     }
 
+    /**
+     * @function synthesisCatchUncaughtExceptionMode()
+     * @desc 開啟CatchUncaughtException模式
+     */
+
     synthesisCatchUncaughtExceptionMode(){
         if( this.gene.mode.catchUncaughtException && this.root.operating === "node" ){
             this.uncaughtExceptionDomain.run(() => {
@@ -1245,39 +1067,17 @@ class Transcription extends ModuleBase {
 }
 
 /**
- * @class Nucleoid()
- * @desc 核心
+ * @class Nucleoid
+ * @desc 掌控整個系統組成的核心物件，為建立Gene的接口
  */
 
 class Nucleoid {
 
-    static addGroup( groupName, group, options ) {
-        Bioreactor.addGroup( groupName, group, options );
-    }
-
-    static hasCurriedFunction(groupName, name) {
-        return Bioreactor.hasCurriedFunction(groupName, name)
-    }
-
-    static hasMethod(groupName, name) {
-        return Bioreactor.hasMethod(groupName, name)
-    }
-
-    static hasGroup(name) {
-        return Bioreactor.hasGroup(groupName, name)
-    }
-
-    static callMethod(groupName, name) {
-        return Bioreactor.getMethod(groupName, name).use()
-    }
-
-    static callCurriedFunction(groupName, name) {
-        return Bioreactor.getCurriedFunction(groupName, name).use()
-    }
-
-    static createMethodGroup(options) {
-        return new MethodGroup(options)
-    }
+    /**
+     * @function createGene(name)
+     * @static
+     * @desc 建立一個Gene
+     */
 
     static createGene(name) {
         return new Gene(name)

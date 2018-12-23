@@ -16,22 +16,36 @@ class ModuleBase {
      * @desc 於console呼叫錯誤，中斷程序並顯示錯誤的物件
      */
 
-    $systemError( functionName, message, object = '$_no_error' ){
+    $systemError(functionName, message, object = '$_no_error'){
         if( object !== '$_no_error' ){
-            console.log( `%c error : `, 'color:#FFF; background:red' );
-            console.log( object );
+            console.log( `%c error : `, 'color:#FFF; background:red' )
+            console.log( object )
         }
-        throw new Error( `(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}` );
+        throw new Error(`(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}`)
     }
 
+    /**
+     * @function $noKey(functionName,target,key)
+     * @desc 檢查該物件是否含有key
+     * @returns {boolean} 如果沒有，回傳true，如果有則報錯
+     */
+
     $noKey( functionName, target, key ) {
-        if( target[key] == null ){
+        if (target[key] == null) {
             return true;
         } else {
             this.$systemError( functionName, 'Name already exists.', key );
             return false;
         } 
     }
+
+    /**
+     * @function $verify(data,validate,assign)
+     * @desc 驗證並返為一個新的物件，並在空屬性中賦予預設屬性
+     * @param {object} data 驗證目標
+     * @param {object} validate 驗證物件，value是一個array，內容是[require,default]
+     * @param {object} assign 返回的物件與指定物件合併
+     */
 
     $verify(data, validate, assign = {}) {
         let newData = {}
@@ -53,6 +67,15 @@ class ModuleBase {
         }
         return Object.assign(newData, assign);
     }
+
+    /**
+     * @function $protection(object,key,getter,value)
+     * @desc 建立一個保護變數
+     * @param {*} object 保護變數必須要有一個目標物件
+     * @param {*} key 為目標物建立一個key
+     * @param {*} getter 這個保護變數被存入的外部物件
+     * @param {*} value 變數值
+     */
 
     $protection(object, key, getter, value) {
         getter[key] = value

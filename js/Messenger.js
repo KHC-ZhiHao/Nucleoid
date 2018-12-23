@@ -9,13 +9,31 @@ class Messenger {
         this.getBase = root.getBase
     }
 
+    /**
+     * @function isError()
+     * @desc 是否為執行錯誤的Messenger
+     * @returns {boolean}
+     */
+
     isError() {
         return !this.success
     }
 
+    /**
+     * @function getErrorMessage()
+     * @desc 獲取錯誤訊息
+     * @returns {string|null}
+     */
+
     getErrorMessage() {
         return this.isError ? this.status.message : null
     }
+
+    /**
+     * @function getStatusToJson()
+     * @desc 獲取狀態並轉換成json格式
+     * @returns {string} json file
+     */
 
     getStatusToJson() {
         return this.status.json()
@@ -24,6 +42,7 @@ class Messenger {
     /**
      * @function getMethods()
      * @desc 獲取模式
+     * @returns {array}
      */
 
     getMode(){
@@ -42,6 +61,5 @@ class Messenger {
         }
         return mode
     }
-
 
 }

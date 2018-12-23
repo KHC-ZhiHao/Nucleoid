@@ -14,7 +14,6 @@ class Transcription extends ModuleBase {
         this.reject = reject
         this.resolve = resolve
         this.templates = this.gene.templates
-        this.bioreactor = Bioreactor
         this.init()
         this.synthesis()
     }
@@ -36,12 +35,10 @@ class Transcription extends ModuleBase {
 
     initBind() {
         this.bind = {
-            io: this.io.bind(this),
             exit: this.exit.bind(this),
             fail: this.fail.bind(this),
             next: this.next.bind(this),
             cross: this.cross.bind(this),
-            methods: this.methods.bind(this),
             addBase: this.root.addBase.bind(this.root),
             polling: this.root.polling.bind(this.root),
             createFragment: this.root.createFragment.bind(this.root)
@@ -51,17 +48,10 @@ class Transcription extends ModuleBase {
     initTimeoutMode() {
         if (this.gene.mode.timeout) {
             let system = this.gene.mode.timeout
-            let params = {
-                name: 'timeout',
-                action: (finish) => {
-                    if (this.root.status.operationTime > system.millisecond) {
-                        this.root.createSystemStatus('timeout', true)
-                        system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
-                        finish()
-                    }
-                }
-            }
-            this.root.polling(params)
+            setTimeout(() => {
+                this.root.createSystemStatus('timeout', true)
+                system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
+            }, system.millisecond)
         }
     }
 
@@ -85,6 +75,11 @@ class Transcription extends ModuleBase {
             }
         }
     }
+
+    /**
+     * @function initGenerator()
+     * @desc 初始化一個生成器
+     */
 
     initGenerator(){
         let self = this
@@ -122,43 +117,57 @@ class Transcription extends ModuleBase {
         this.iterator = generator();
     }
 
-    deepClone(obj, hash = new WeakMap()) {
-        if (Object(obj) !== obj) return obj
-        if (obj instanceof Set) return new Set(obj)
-        if (hash.has(obj)) return hash.get(obj)
-        const result = obj instanceof Date ? new Date(obj)
-                     : obj instanceof RegExp ? new RegExp(obj.source, obj.flags)
-                     : Object.create(null)
+    /**
+     * @function deepClone(obj)
+     * @desc 深拷貝一個物件，並回傳此物件
+     */
+
+    deepClone(obj) {
+        let hash = new WeakMap()
+        if (Object(obj) !== obj) {
+            return obj
+        }
+        if (obj instanceof Set) {
+            return new Set(obj)
+        }
+        if (hash.has(obj)) {
+            return hash.get(obj)
+        }
+        const result = obj instanceof Date ? new Date(obj) : obj instanceof RegExp ? new RegExp(obj.source, obj.flags) : Object.create(null)
         hash.set(obj, result)
-        if (obj instanceof Map)
-            Array.from(obj, ([key, val]) => result.set(key, this.deepClone(val, hash)) )
-        return Object.assign(result, ...Object.keys(obj).map (
-            key => ({ [key]: this.deepClone(obj[key], hash) }) ))
+        if (obj instanceof Map) {
+            Array.from(obj, ([key, val]) => {
+                result.set(key, this.deepClone(val, hash))
+            })
+        }
+        return Object.assign(result, ...Object.keys(obj).map((key) => {
+            return ({
+                [key]: this.deepClone(obj[key], hash)
+            })
+        }))
     }
+
+    /**
+     * @function getSkill()
+     * @desc 獲取可用技能
+     * @returns {cross, polling, addBase, deepClone, createFragment}
+     */
 
     getSkill() {
         return {
-            io: this.bind.io,
             cross: this.bind.cross,
-            methods: this.bind.methods,
             polling: this.bind.polling,
             addBase: this.bind.addBase,
+            deepClone: this.deepClone,
             createFragment: this.bind.createFragment
         }
     }
 
     /**
-     * @function method()
-     * @desc 獲取使用的模塊
+     * @function cross(gene,callback)
+     * @desc 有時不免俗需要抽出邏輯層，cross可以讓你呼叫外部基因並疊加狀態
+     * @callback (error,messenger)
      */
-
-    methods(groupName, name){
-        return this.bioreactor.getMethod(groupName, name).use()
-    }
-
-    io(groupName, name){
-        return this.bioreactor.getCurriedFunction(groupName, name).use()
-    }
 
     cross(gene, callback) {
         if (gene instanceof Gene) {
@@ -173,6 +182,11 @@ class Transcription extends ModuleBase {
             this.$systemError('cross', 'Target not a gene module.', gene)
         }
     }
+
+    /**
+     * @function close(success,message)
+     * @desc 不論是fail或exit都會處裡的邏輯層
+     */
 
     close(success, message) {
         this.root.close(success, message)
@@ -229,9 +243,19 @@ class Transcription extends ModuleBase {
         }
     }
 
+    /**
+     * @function synthesis()
+     * @desc TryCatch與CatchUncaughtException其實需要一個統一的傳遞街口
+     */
+
     synthesis(){
         this.synthesisTryCatchMode()
     }
+
+    /**
+     * @function synthesisTryCatchMode()
+     * @desc 開啟TryCatch模式
+     */
 
     synthesisTryCatchMode(){
         if( this.gene.mode.catchException ){
@@ -248,6 +272,11 @@ class Transcription extends ModuleBase {
             this.synthesisCatchUncaughtExceptionMode()
         }
     }
+
+    /**
+     * @function synthesisCatchUncaughtExceptionMode()
+     * @desc 開啟CatchUncaughtException模式
+     */
 
     synthesisCatchUncaughtExceptionMode(){
         if( this.gene.mode.catchUncaughtException && this.root.operating === "node" ){

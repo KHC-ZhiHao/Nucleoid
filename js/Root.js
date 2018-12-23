@@ -1,3 +1,8 @@
+/**
+ * @class Root
+ * @desc Gene執行Transcription時，掌控Status和Polling的源頭
+ */
+
 class Root extends ModuleBase {
 
     constructor(gene) {
@@ -11,38 +16,18 @@ class Root extends ModuleBase {
         this.protection = {}
         this.carryStatus = null
         this.pollingEvents = []
-        this.init()
+        this.initBase()
+        this.initPolling()
     }
 
     get status() {
         return this.carryStatus || this.rootStatus
     }
 
-    getBase() {
-        let base = {}
-        for (let key in this.base) {
-            base[key] = this.base[key]
-        }
-        for (let key in this.protection) {
-            base[key] = this.protection[key]
-        }
-        return base 
-    }
-
-    setTargetStatus(status) {
-        this.carryStatus = status
-    }
-
-    createSystemStatus(name, success, message) {
-        let status = new Status(name, 'system')
-            status.set(success, message)
-        this.status.addChildren(status)
-    }
-
-    init() {
-        this.initBase()
-        this.initPolling()
-    }
+    /**
+     * @function initPolling()
+     * @desc 初始化輪尋機制
+     */
 
     initPolling() {
         this.interval = setInterval(() => {
@@ -61,6 +46,11 @@ class Root extends ModuleBase {
         }, this.delay)
     }
 
+    /**
+     * @function initBase()
+     * @desc 初始化鹼基
+     */
+
     initBase() {
         if (this.gene.genetic) {
             let datas = this.gene.genetic()
@@ -72,6 +62,43 @@ class Root extends ModuleBase {
                 this.$systemError('initBase', 'Genetic retrun not a object', datas)
             }
         }
+    }
+
+    /**
+     * @function getBase()
+     * @desc 直接獲取base是不會得到protection物件的
+     */
+
+    getBase() {
+        let base = {}
+        for (let key in this.base) {
+            base[key] = this.base[key]
+        }
+        for (let key in this.protection) {
+            base[key] = this.protection[key]
+        }
+        return base 
+    }
+
+    /**
+     * @function setTargetStatus(status)
+     * @desc 轉移指定的status對象
+     * @param {Status} status 
+     */
+
+    setTargetStatus(status) {
+        this.carryStatus = status
+    }
+
+    /**
+     * @function createSystemStatus(name,success,message)
+     * @desc 快捷建立一個status至指定的對象中
+     */
+
+    createSystemStatus(name, success, message) {
+        let status = new Status(name, 'system')
+            status.set(success, message)
+        this.status.addChildren(status)
     }
 
     /**
@@ -91,9 +118,20 @@ class Root extends ModuleBase {
         }
     }
 
+    /**
+     * @function polling(options)
+     * @desc 輪循一個事件
+     * @param {object} options {name:string, action:function} 
+     */
+
     polling(options) {
         this.pollingEvents.push(new PollingEvent(this, options))
     }
+
+    /**
+     * @function clearPollingEvents()
+     * @desc 清空宣告停止輪循的事件
+     */
 
     clearPollingEvents() {
         this.pollingEvents = this.pollingEvents.filter((d) => {
@@ -101,116 +139,26 @@ class Root extends ModuleBase {
         })
     }
 
+    /**
+     * @function createFragment(name)
+     * @desc 建立一個片段
+     */
+
     createFragment(name) {
         let fragment = new Fragment(this, name)
         return fragment.use()
     }
 
+    /**
+     * @function close(success,message)
+     * @desc 完成Transcription後，關閉系統
+     * @param {boolean} success 系統是否順利結束
+     * @param {any} message 如果錯誤，是怎樣的錯誤
+     */
+
     close(success, message) {
         this.rootStatus.set(success, message)
         clearInterval(this.interval)
-    }
-
-}
-
-class PollingEvent extends ModuleBase {
-
-    constructor(root, options) {
-        super('PollingEvent')
-        this.name = options.name
-        this.status = new Status(this.name, 'polling')
-        this.action = options.action
-        this.finish = false
-        root.status.addChildren(this.status)
-    }
-
-    activate() {
-        this.action(this.close.bind(this))
-    }
-
-    close() {
-        this.status.set(true)
-        this.finish = true
-    }
-
-}
-
-class Fragment extends ModuleBase {
-
-    constructor(root, name) {
-        super('Fragment')
-        this.over = 0
-        this.name = name || 'no name'
-        this.stop = false
-        this.status = new Status(this.name, 'fragment')
-        this.thread = []
-        root.status.addChildren(this.status)
-    }
-
-    install(callback) {
-        this.callback = callback
-    }
-
-    use() {
-        return {
-            add: this.add.bind(this),
-            activate: this.activate.bind(this)
-        }
-    }
-
-    add(options) {
-        this.thread.push(this.$verify(options, {
-            name: [true, '#string'],
-            action: [true, '#function'] 
-        }))
-    }
-
-    regsterError(status) {
-        return (error) => {
-            if( this.stop === false ){
-                status.set(false, error)
-                this.stop = true
-                this.callback(error || 'unknown error')
-            }
-        }
-    }
-
-    regsterOnload(status) {
-        return () => {
-            this.over += 1
-            if( this.stop === false ){
-                if( this.over >= this.thread.length ){
-                    status.set(true)
-                    this.stop = true
-                    this.callback()
-                }
-            }
-        }
-    }
-
-    actionThread(thread) {
-        let func = async() => {
-            let status = new Status(thread.name, 'thread')
-            let onload = this.regsterOnload(status)
-            let error = this.regsterError(status)
-            this.status.addChildren(status)
-            thread.action(error, onload)
-        }
-        func()
-    }
-
-    activate(callback) {
-        let length = this.thread.length
-        this.install(callback)
-        for (let i = 0; i < length; i++) {
-            this.actionThread(this.thread[i])
-        }
-        if( length === 0 ){
-            this.callback(null)
-        }
-        this.activate = () => {
-            this.$systemError('activate', `This template(${this.name}) already  called`)
-        }
     }
 
 }
