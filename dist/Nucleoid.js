@@ -824,7 +824,7 @@ class Transcription extends ModuleBase {
     initTimeoutMode() {
         if (this.gene.mode.timeout) {
             let system = this.gene.mode.timeout
-            setTimeout(() => {
+            this.timeoutSystem = setTimeout(() => {
                 this.root.createSystemStatus('timeout', true)
                 system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
             }, system.millisecond)
@@ -966,6 +966,9 @@ class Transcription extends ModuleBase {
 
     close(success, message) {
         this.root.close(success, message)
+        if (this.timeoutSystem) {
+            clearTimeout(this.timeoutSystem)
+        }
         if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
             window.removeEventListener('error', this.uncaughtExceptionAction)
         }
