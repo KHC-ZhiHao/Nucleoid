@@ -71,7 +71,29 @@ class Status extends ModuleBase{
      */
 
     json() {
-        return JSON.stringify(this.get(), null, 4)
+        let data = this.get()
+        let inspectJSON = function (target, used = []) {
+            let output = {}
+            for (let key in target) {
+                let aims = target[key]
+                let type = typeof aims
+                if (type === 'function') {
+                    continue
+                } else if (type === 'object') {
+                    let newUsed = [target].concat(used)
+                    if (newUsed.includes(aims)) {
+                        output[key] = 'Circular structure object.'
+                    } else {
+                        output[key] = inspectJSON(aims, newUsed)
+                    }
+                } else {
+                    output[key] = aims
+                }
+            }
+            return output
+        }
+        data.attributes = inspectJSON(data.attributes)
+        return JSON.stringify(data, null, 4)
     }
 
     /**

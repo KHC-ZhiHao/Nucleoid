@@ -41,6 +41,8 @@ class Transcription extends ModuleBase {
             cross: this.cross.bind(this),
             addBase: this.root.addBase.bind(this.root),
             polling: this.root.polling.bind(this.root),
+            setStatusAttr: this.setStatusAttr.bind(this),
+            setRootStatusAttr: this.setRootStatusAttr.bind(this),
             createFragment: this.root.createFragment.bind(this.root)
         }
     }
@@ -90,7 +92,7 @@ class Transcription extends ModuleBase {
                 self.gene.synthesis.initiation.bind(self.case)(self.base, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
                 yield
             }
-            while( index <= 10000 ){
+            while (index <= 10000) {
                 if (self.finish) {
                     break
                 } else {
@@ -122,8 +124,7 @@ class Transcription extends ModuleBase {
      * @desc 深拷貝一個物件，並回傳此物件
      */
 
-    deepClone(obj) {
-        let hash = new WeakMap()
+    deepClone(obj, hash = new WeakMap()) {
         if (Object(obj) !== obj) {
             return obj
         }
@@ -159,8 +160,18 @@ class Transcription extends ModuleBase {
             polling: this.bind.polling,
             addBase: this.bind.addBase,
             deepClone: this.deepClone,
+            setStatusAttr: this.bind.setStatusAttr,
+            setRootStatusAttr: this.bind.setRootStatusAttr,
             createFragment: this.bind.createFragment
         }
+    }
+
+    setRootStatusAttr(key, value) {
+        this.root.rootStatus.addAttr(key, value)
+    }
+
+    setStatusAttr(key, value) {
+        this.status.addAttr(key, value)
     }
 
     /**

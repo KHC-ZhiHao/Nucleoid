@@ -220,7 +220,7 @@ gene.template('use fragment', (base, skill, next, exit, fail) => {
 直接宣告base.$foo是不會有任何保護作用的，可以使用skill.addBase實現此功能
 
 ```js
-gene.template('use fragment', (base, skill, next, exit, fail) => {
+gene.template('use add base', (base, skill, next, exit, fail) => {
     skill.addBase('$foo', 'foo')
     base.$foo = 'bar' // error
     next()
@@ -232,9 +232,9 @@ gene.template('use fragment', (base, skill, next, exit, fail) => {
 或許你的API有著令人難以費解的複雜公式與資料結構，建立多支基因的可能性大增時，cross會幫助你執行外部基因並導入status至呼叫基因中
 
 ```js
-gene.template('use fragment', (base, skill, next, exit, fail) => {
-    let cross_gene = anotherGene
-    skill.cross(cross_gene, (err, messenger) => {
+gene.template('use cross', (base, skill, next, exit, fail) => {
+    let crossGene = anotherGene
+    skill.cross(crossGene, (err, messenger) => {
         if (err) {
             base.error = err
         }
@@ -249,7 +249,7 @@ gene.template('use fragment', (base, skill, next, exit, fail) => {
 複製一個物件
 
 ```js
-gene.template('use fragment', (base, skill, next, exit, fail) => {
+gene.template('use deep clone', (base, skill, next, exit, fail) => {
     let obj = {
         a: {
             b: 5
@@ -267,7 +267,7 @@ gene.template('use fragment', (base, skill, next, exit, fail) => {
 Nucleoid提供了一個Interval(5 millisecond)來實現輪循機制，避免再每個template中建立多個Interval
 
 ```js
-gene.template('use fragment', (base, skill, next, exit, fail) => {
+gene.template('use polling', (base, skill, next, exit, fail) => {
     base.count = 0
     system.polling({
         name: 'polling',
@@ -276,6 +276,19 @@ gene.template('use fragment', (base, skill, next, exit, fail) => {
         }
     })
     next()
+})
+```
+
+### 添加狀態屬性 (v1.47)
+
+為最終的輸出狀態添加訊息
+
+```js
+gene.template('use set status attr', (base, skill, next, exit, fail) => {
+    // 記載至當年template的狀態
+    skill.setStatusAttr('now', 5)
+    // 記載根狀態的狀態
+    skill.setRootStatusAttr('root', 10)
 })
 ```
 
@@ -349,6 +362,9 @@ gene.setInitiation((base, skill, next, exit, fail) => {
 ## 支援環境(support)
 
 Nodejs 8+ or support ES6 browser
+
+## 其他
+[改版日誌](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/version.md)
 
 [npm-image]: https://img.shields.io/npm/v/nucleoid.svg
 [npm-url]: https://npmjs.org/package/nucleoid
