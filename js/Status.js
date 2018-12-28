@@ -92,7 +92,7 @@ class Status extends ModuleBase{
             }
             return output
         }
-        data.attributes = inspectJSON(data.attributes)
+        data = inspectJSON(data)
         return JSON.stringify(data, null, 4)
     }
 

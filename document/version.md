@@ -11,3 +11,7 @@
 * status => json : attributes序列化的過程會排除循環引用結構
 * skill => (new) setStatusAttr : 可以在template中設定當下status屬性
 * skill => (new) setRootStatusAttr : 可以在template中設定根status的屬性
+
+## 1.4.8
+
+* status => json : 解決深度循環引用結構的問題

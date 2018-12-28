@@ -166,9 +166,19 @@ class Transcription extends ModuleBase {
         }
     }
 
+    /**
+     * @function setRootStatusAttr(key,value)
+     * @desc 可在skill中定義根狀態
+     */
+
     setRootStatusAttr(key, value) {
         this.root.rootStatus.addAttr(key, value)
     }
+
+    /**
+     * @function setStatusAttr(key,value)
+     * @desc 可在skill中定義狀態
+     */
 
     setStatusAttr(key, value) {
         this.status.addAttr(key, value)
