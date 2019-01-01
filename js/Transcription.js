@@ -66,7 +66,7 @@ class Transcription extends ModuleBase {
         if( this.gene.mode.catchUncaughtException ){
             this.uncaughtExceptionAction = (error) => {
                 let exception = error.stack ? error : error.error
-                this.root.createSystemStatus('uncaught exception', true, exception.message)
+                this.root.createSystemStatus('uncaught exception', true, exception.stack)
                 this.gene.mode.catchUncaughtException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
             }
             if( this.root.operating === 'node' ){
@@ -256,7 +256,7 @@ class Transcription extends ModuleBase {
     next(){
         if (this.finish === false) {
             if (this.gene.mode.traceBase) {
-                this.gene.mode.traceBase.action(this.deepClone(this.root.getBase()), this.status)
+                this.gene.mode.traceBase.action(this.deepClone(this.root.base), this.status)
             }
             if (this.gene.synthesis.elongation) {
                 this.gene.synthesis.elongation(this.base, this.bind.exit, this.bind.fail)
@@ -287,7 +287,7 @@ class Transcription extends ModuleBase {
                 this.synthesisCatchUncaughtExceptionMode()
             } catch (exception) {
                 if (this.gene.mode.catchException) {
-                    this.root.createSystemStatus('error catch', true, exception.message)
+                    this.root.createSystemStatus('error catch', true, exception.stack)
                     this.gene.mode.catchException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
                 }
                 return false

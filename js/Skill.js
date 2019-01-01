@@ -58,7 +58,14 @@ class Fragment extends ModuleBase {
      */
 
     install(callback) {
-        this.callback = callback
+        this.callback = (error) => {
+            if (error) {
+                this.status.set(false, error)
+            } else {
+                this.status.set(true)
+            }
+            callback(error)
+        }
     }
 
     /**
@@ -109,10 +116,10 @@ class Fragment extends ModuleBase {
 
     regsterOnload(status) {
         return () => {
+            status.set(true)
             this.over += 1
             if( this.stop === false ){
                 if( this.over >= this.thread.length ){
-                    status.set(true)
                     this.stop = true
                     this.callback()
                 }

@@ -22,10 +22,6 @@ Nucleoid是因應cloud function而生，但實際上不一定得用在這個領�
 npm i nucleoid
 ```
 
-## 文件
-
-補充中...
-
 ## 如何開始
 
 server less給了我們雲端伺服器架構的概念，我們不再需要像傳統伺服器一樣處理各種middleware，未來，我們只需要專注在function的編寫上
@@ -271,7 +267,7 @@ gene.template('use polling', (base, skill, next, exit, fail) => {
     base.count = 0
     system.polling({
         name: 'polling',
-        action(finish) {
+        action(stop) {
             base.count += 1
         }
     })
@@ -279,7 +275,7 @@ gene.template('use polling', (base, skill, next, exit, fail) => {
 })
 ```
 
-### 添加狀態屬性 (v1.47)
+### 添加狀態屬性
 
 為最終的輸出狀態添加訊息
 
@@ -303,22 +299,22 @@ gene.template('use set status attr', (base, skill, next, exit, fail) => {
 如果將錯誤捕捉模式宣告為true，在每個template執行時都會用try-catch處理，
 當發現錯誤，執行該函數
 
->錯誤後必定給執行exit或fail，整個流程並不會繼續執行下去
+>錯誤後必需執行exit或fail，整個流程並不會繼續執行下去
 
 ```js
-gene.setCatchExceptionMode(true, (meg, exception, exit, fail) => {
+gene.setCatchExceptionMode(true, (base, exception, exit, fail) => {
     fail(exception.message)
 })
 ```
 
-### 補錯未捕捉錯誤
+### 未捕捉錯誤
 
 就算使用try-catc包覆，也無法catch非同步函數造成的錯誤，如果有這類的困擾，就使用UncaughtException吧
 
->錯誤後必定給執行exit或fail，整個流程並不會繼續執行下去
+>錯誤後必需執行exit或fail，整個流程並不會繼續執行下去
 
 ```js
-gene.setCatchUncaughtExceptionMode(true, (meg, exception, exit, fail) => {
+gene.setCatchUncaughtExceptionMode(true, (base, exception, exit, fail) => {
     fail(exception.message)
 })
 ```
@@ -339,16 +335,63 @@ gene.setTraceBaseMode(true, (cloneBase, status) => {
 整個流程如果大於設定時間(毫秒)，執行設定的函數
 
 ```js
-gene.setTimeoutMode(true, 20000, (meg, exit, fail) => {
+gene.setTimeoutMode(true, 20000, (base, exit, fail) => {
     fail('Timeout')
 })
 ```
 
+
+## Messenger
+
+Messenger是Transcription後的完成品，它主要攜帶著整個系統的兩個核心 **base** 和 **status**。
+
+### Base
+
+base便是執行template中被不斷代入的物件，可以藉由getBase()打印出受保護的base。
+
+```js
+// if base {a: 5, $b: 10}
+gene.transcription().then((messenger) => {
+    console.log(Object.keys(messenger.base)) // a
+    console.log(Object.keys(messenger.getBase())) // a, $b
+    console.log(messenger.status) // 下方介紹
+}
+```
+
+## Status
+
+status是整個系統堆蹤堆棧的核心，其實也是Nucleoid最初的目的，它是一個樹狀結構。
+
+>Messenger攜帶的status便是root status。
+
+### get
+
+status需要解讀必須經由get()來取得該狀態序列化的結構。
+
+### addAttr
+
+attributes是打印status中唯一的可自訂一接口，使用addAttr()來加入attribute
+
+```js
+status.addAttr('key', 'value')
+console.log(status.get().attributes.key) // value
+```
+
+### report
+
+status中輸出可視報告有兩個接口，這兩接口會盡可能排除格式轉換間的錯誤
+
+#### json()
+
+會輸出整個status樹狀結構的json文本。
+
+#### html()
+
+這會輸出一個html文本，雖然沒有json詳細，但更直觀。
+
 ## Assembly
 
-[Assembly](https://github.com/KHC-ZhiHao/Assembly)是一個基於functional programming概念所編寫的函數包裝器，其實它是由本系統額外延伸的函示庫，因此它對於建構整個架構有著良好的相依性，算是某些補強Model的措施
-
->在整個基因表現的過程中，Assembly有如扮演著酵素的腳色
+[Assembly](https://github.com/KHC-ZhiHao/Assembly)是一個基於functional programming概念所編寫的函數包裝器，其實它是由本系統額外延伸的函示庫，在整個基因表現的過程中，Assembly有如扮演著酵素的腳色，能減輕整個Nucleoid建構的負擔。
 
 ```js
 // 可以在Initiation中將Assembly引入

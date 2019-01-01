@@ -57,12 +57,35 @@ class Status extends ModuleBase{
             success: this.success,
             attributes: this.attributes,
             operationTime: this.operationTime,
+            totalOperationTime: 0,
             children: []
         }
         for (let child of this.children) {
             data.children.push(child.get())
+            data.totalOperationTime += child.operationTime
         }
         return data
+    }
+
+    inspect(target, used = []) {
+        let output = Array.isArray(target) ? [] : {}
+        for (let key in target) {
+            let aims = target[key]
+            let type = typeof aims
+            if (type === 'function') {
+                continue
+            } else if (type === 'object') {
+                let newUsed = [target].concat(used)
+                if (newUsed.includes(aims)) {
+                    output[key] = 'Circular structure object.'
+                } else {
+                    output[key] = this.inspect(aims, newUsed)
+                }
+            } else {
+                output[key] = aims
+            }
+        }
+        return output
     }
 
     /**
@@ -71,29 +94,33 @@ class Status extends ModuleBase{
      */
 
     json() {
-        let data = this.get()
-        let inspectJSON = function (target, used = []) {
-            let output = {}
-            for (let key in target) {
-                let aims = target[key]
-                let type = typeof aims
-                if (type === 'function') {
-                    continue
-                } else if (type === 'object') {
-                    let newUsed = [target].concat(used)
-                    if (newUsed.includes(aims)) {
-                        output[key] = 'Circular structure object.'
-                    } else {
-                        output[key] = inspectJSON(aims, newUsed)
-                    }
-                } else {
-                    output[key] = aims
-                }
-            }
-            return output
-        }
-        data = inspectJSON(data)
+        let data = this.inspect(this.get())
         return JSON.stringify(data, null, 4)
+    }
+
+    html() {
+        let data = this.inspect(this.get())
+        let createCard = function(status) {
+            let border = `solid 1px ${status.success ? 'blue' : 'red'}`
+            let html = `<div style="padding:5px; margin: 5px; border:${border}">`
+                html += `<div>type : ${status.type}</div>`
+                html += `<div>name : ${status.name}</div>`
+                html += `<div>operation time : ${status.operationTime}</div>`
+                html += `<div>total operation time : ${status.totalOperationTime}</div>`
+                html += status.message ? `<div>message : <br><pre>${status.message}</pre></div>` : ''
+            for (let key in status.attributes) {
+                html += `<div> attributes(${key}) : `
+                html += `<pre>${JSON.stringify(status.attributes[key], null, 4)}</pre>`
+                html += `</div>`
+            }
+            let length = status.children.length
+            for (let i = 0; i < length; i++) {
+                html += createCard(status.children[i])
+            }
+            html += '</div>'
+            return html
+        }
+        return createCard(data)
     }
 
     /**

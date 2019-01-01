@@ -41,7 +41,7 @@ class Root extends ModuleBase {
                 }
             }
             if (clear) {
-                this.filterPollingEvents()
+                this.clearPollingEvents()
             }
         }, this.delay)
     }
