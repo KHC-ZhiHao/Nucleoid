@@ -87,10 +87,10 @@
         /**
          * @function $protection(object,key,getter,value)
          * @desc 建立一個保護變數
-         * @param {*} object 保護變數必須要有一個目標物件
-         * @param {*} key 為目標物建立一個key
-         * @param {*} getter 這個保護變數被存入的外部物件
-         * @param {*} value 變數值
+         * @param {object} object 保護變數必須要有一個目標物件
+         * @param {string} key 為目標物建立一個key
+         * @param {object} getter 這個保護變數被存入的外部物件
+         * @param {any} value 變數值
          */
 
         $protection(object, key, getter, value) {
@@ -288,14 +288,14 @@
             this.gene = gene
             this.name = gene.name
             this.base = {}
-            this.delay = 10
+            this.delay = 5
+            this.interval = null
             this.operating = typeof window === 'undefined' ? 'node' : 'browser'
             this.rootStatus = new Status(this.name, 'root')
             this.protection = {}
             this.carryStatus = null
             this.pollingEvents = []
             this.initBase()
-            this.initPolling()
         }
 
         get status() {
@@ -403,6 +403,9 @@
          */
 
         polling(options) {
+            if (this.interval == null) {
+                this.initPolling()
+            }
             this.pollingEvents.push(new PollingEvent(this, options))
         }
 
@@ -436,7 +439,9 @@
 
         close(success, message) {
             this.rootStatus.set(success, message)
-            clearInterval(this.interval)
+            if (this.interval) {
+                clearInterval(this.interval)
+            }
         }
 
     }
@@ -506,6 +511,7 @@
         }
 
     }
+
     /**
      * @class Status()
      * @desc 堆棧狀態

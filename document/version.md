@@ -41,3 +41,14 @@
 
 * Status => 更動Try-Catch的Exception在status的輸出
 * TraceBase => 保護的Base不會被clone出來
+
+## 1.5.0
+
+### FIX
+
+* README => 修正錯字與修飾文字
+* Polling => 輪詢時間修正
+
+### MODIFY
+
+* Polling => 如果整個模板中沒有呼叫過輪詢，interval不會被啟動

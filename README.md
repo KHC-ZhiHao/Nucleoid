@@ -2,21 +2,31 @@
 
 [![NPM Version][npm-image]][npm-url]
 
-## 簡介
+## 簡介 (Summary)
 
-Nucleoid是一個流程控制系統，早期目的就是為了處裡server less中cloud function太難追蹤堆棧和錯誤的問題，但現在它具有一個完整的生命週期，甚至能順手處理Request與response等API模式，雖然稱不上是框架，但它也擁有了些許框架與函數式程式設計(functional programming)的特性。
+Nucleoid是基於Promise的一個流程控制系統，早期目的就是為了處裡server less中cloud function太難追蹤堆棧和錯誤的問題，但現在它具有一個完整的生命週期，能協助RESTful API模式，例如Request與Response。
+
+Nucleoid is a Promise based process control system. The early purpose was to make it difficult to track stacks and errors in the cloud function, but now it has a complete life cycle and can help with RESTful APIs such as Request and Response.
+
+[RESTful API Example](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/example)
+
+>範例採用了[Joi](https://github.com/hapijs/joi)作為驗證的模塊。
+
+>Nucleoid是因應cloud function而生，但實際上不一定得用在這個領域，畢竟只是一個流程控制的系統。
 
 >Nucleoid的建構模式與命名來自細胞生物學中基因表現"轉錄"的過程。
 
-## Cloud Function
-
-Nucleoid是因應cloud function而生，但實際上不一定得用在這個領域，畢竟只是一個流程控制的系統，之所以會不斷提到該主題，是因為接下來我會以執行一次cloud function作為範例
-
 ## 安裝
 
-該函示庫開發的過程中有兩個分水嶺，從1.0.8版本後我發現它值得更好，因此決定重構內部代碼，借鏡了rxjs與async的概念，並在實戰一些專案後，才在1.4.5版從血泊中爬起。
+該函示庫開發的過程中有兩個分水嶺，從1.0.8版本後我發現它值得更好，因此決定重構內部代碼，借鏡了rxjs與async的概念，並在實戰一些專案後，才在1.4.5版從血泊中爬起，因此本文件只支援1.4.5以上版本。
 
-因此請注意是否安裝的為1.4.5以上版本。
+#### html
+
+```html
+<script src="./dist/Nucleoid.js"></script>
+```
+
+#### node
 
 ```bash
 npm i nucleoid
@@ -24,7 +34,9 @@ npm i nucleoid
 
 ## 如何開始
 
-server less給了我們雲端伺服器架構的概念，我們不再需要像傳統伺服器一樣處理各種middleware，未來，我們只需要專注在function的編寫上
+server less給了我們雲端伺服器架構的藍圖，不再需要在程式碼中處理各種middleware，只需要構思如何一氣呵成的寫完每個functions。
+
+---
 
 ### 建立一支基因
 
@@ -43,25 +55,37 @@ var Nucleoid = require('nucleoid')
 var gene = Nucleoid.createGene()
 ```
 
+---
+
 ### Base
 
-DNA是由含氮鹼基(nitrogenous base)所構成的，在Nucleoid中以base代稱，base是一個物件，將在整個生命週期中被傳遞，直到最後被輸出
+DNA是由含氮鹼基(nitrogenous base)所構成的，在Nucleoid中以base代稱，base是一個物件，將在整個生命週期中被傳遞，直到最後被輸出。
+
+---
 
 ### 跳脫
 
-Gene是基於Promise運行的，exit與fail分別對應resolve, reject兩個行為
+Gene是基於Promise運行的，exit與fail分別對應resolve, reject兩個行為。
 
-next: 為接續下一個動作，於起始和模板中使用
+#### next
 
-exit: 直接執行或整個模板執行結束後呼叫，返回resolve
+為接續下一個動作，於起始和模板中使用。
 
-fail: 直接執行中斷流程，fail可以傳入一個參數，它將呈現在root status中的message，並返回reject
+#### exit
+
+直接執行或整個模板執行結束後呼叫，返回resolve。
+
+#### fail
+
+直接執行中斷流程，fail可以傳入一個參數，它將呈現在root status中的message，並返回reject。
+
+---
 
 ### 定義遺傳因子
 
-如果定義了遺傳因子，這將在每次執行模板後自動加入回傳的物件於base中
+如果定義了遺傳因子，這將在每次執行模板後自動加入回傳的物件於base中。
 
-若在key的首字加入$字號，則會建立一個受保護不能被更動的物件
+>若在key的首字加入$字號，則會建立一個受保護不能被更動的物件。
 
 ```js
 gene.setGenetic(() => {
@@ -80,13 +104,15 @@ gene.setGenetic(() => {
 })
 ```
 
+---
+
 ### 定義生命週期
 
-gene分為起始、延長與終止三個周期，分別處裡各種不同的狀況
+gene分為起始、延長與終止三個周期，分別處裡各種不同的狀況。
 
-起始
+#### 起始
 
-基本上起始就是一個模板屬性，但不會記載至status中
+基本上起始就是一個模板屬性，但不會記載至status中。
 
 ```js
 // 將Initiation應用在處理request上
@@ -104,9 +130,9 @@ gene.setInitiation((base, skill, next, exit, fail) => {
 })
 ```
 
-延長
+#### 延長
 
-在每次執行模板後都會呼叫一次延長週期，可以在這判定base的變異是否正確
+在每次執行模板後都會呼叫一次延長週期，可以在這判定base的變異是否正確。
 
 ```js
 // 如果Response發生過改變，中斷程序
@@ -117,9 +143,9 @@ gene.setElongation((base, exit, fail) => {
 })
 ```
 
-終止
+#### 終止
 
-不論任何可能中斷了流程，最終都會呼叫終止期，此處最重要的地方是在於status的後處裡
+不論任何可能中斷了流程，最終都會呼叫終止期，此處最重要的地方是在於status的後處裡。
 
 ```js
 // 當Response Code錯誤，廣播錯誤通知工程師
@@ -131,9 +157,11 @@ gene.setTermination((base, status) => {
 })
 ```
 
+---
+
 ### 為這支基因描述模板
 
-模板是整個流程控制的中樞，在cloud function的實踐中，我將其用來控制每個API的實際行為，可以視作為類似controller的實現
+模板是整個流程控制的中樞，在cloud function的實踐中，我將其用來控制每個API的實際行為，可以視作為類似controller的實現。
 
 ```js
 //預設情況建立了兩支API
@@ -152,9 +180,11 @@ gerAuthorAge() {
 }
 ```
 
+---
+
 ### 轉錄建立的基因
 
-宣告轉錄是最後的步驟，回傳一個Promise，執行並等待整個生命周期結束，並擲出一個messenger物件
+宣告轉錄是最後的步驟，回傳一個Promise，執行並等待整個生命周期結束，並擲出一個messenger物件。
 
 ```js
 gene.transcription().then((messenger) => {
@@ -174,13 +204,15 @@ gene.transcription().then((messenger) => {
 })
 ```
 
+---
+
 ## 使用技能
 
-雖然你已經成功定義好了API，但總有一些不順手對吧?
+雖然你已經成功定義好了API，但總有一些不順手對吧？
 
-Skill扮演了一個helper的腳色，它穿梭於整個模板中，幫你度過難關，在某些技能的使用上甚至會加入至status中
+Skill扮演了一個helper的腳色，它穿梭於整個模板中，幫你度過難關，在某些技能的使用上甚至會加入至status中。
 
-在未來的版本更動中，多會以擴充skill為主
+---
 
 ### 使用片段(fragment)
 
@@ -211,9 +243,11 @@ gene.template('use fragment', (base, skill, next, exit, fail) => {
 })
 ```
 
+---
+
 ### 加入鹼基
 
-直接宣告base.$foo是不會有任何保護作用的，可以使用skill.addBase實現此功能
+直接宣告base.$foo是不會有任何保護作用的，可以使用skill.addBase實現此功能。
 
 ```js
 gene.template('use add base', (base, skill, next, exit, fail) => {
@@ -223,9 +257,11 @@ gene.template('use add base', (base, skill, next, exit, fail) => {
 })
 ```
 
+---
+
 ### 基因雜交
 
-或許你的API有著令人難以費解的複雜公式與資料結構，建立多支基因的可能性大增時，cross會幫助你執行外部基因並導入status至呼叫基因中
+或許你的API有著令人難以費解的複雜公式與資料結構，建立多支基因的可能性大增時，cross會幫助你執行外部基因並導入status至呼叫基因中。
 
 ```js
 gene.template('use cross', (base, skill, next, exit, fail) => {
@@ -240,9 +276,11 @@ gene.template('use cross', (base, skill, next, exit, fail) => {
 })
 ```
 
+---
+
 ### 深拷貝
 
-複製一個物件
+複製一個物件。
 
 ```js
 gene.template('use deep clone', (base, skill, next, exit, fail) => {
@@ -258,9 +296,11 @@ gene.template('use deep clone', (base, skill, next, exit, fail) => {
 })
 ```
 
-### 輪循
+---
 
-Nucleoid提供了一個Interval(5 millisecond)來實現輪循機制，避免再每個template中建立多個Interval
+### 輪詢
+
+Nucleoid提供了一個Interval(5 millisecond)來實現輪詢機制，避免再每個template中建立多個Interval。
 
 ```js
 gene.template('use polling', (base, skill, next, exit, fail) => {
@@ -275,9 +315,11 @@ gene.template('use polling', (base, skill, next, exit, fail) => {
 })
 ```
 
+---
+
 ### 添加狀態屬性
 
-為最終的輸出狀態添加訊息
+為最終的輸出狀態添加訊息。
 
 ```js
 gene.template('use set status attr', (base, skill, next, exit, fail) => {
@@ -288,18 +330,20 @@ gene.template('use set status attr', (base, skill, next, exit, fail) => {
 })
 ```
 
+---
+
 ## 監聽模式
 
 雖然我仍然建議再有疑慮的邏輯中加入try-catch來做例外處裡，但用全域處理比較好debug就是了...
 
-在頂層定義基因時我們就可以順手定義以下模式 :
+---
 
 ### 錯誤捕捉
 
 如果將錯誤捕捉模式宣告為true，在每個template執行時都會用try-catch處理，
-當發現錯誤，執行該函數
+當發現錯誤，執行該函數。
 
->錯誤後必需執行exit或fail，整個流程並不會繼續執行下去
+>錯誤後必需執行exit或fail，整個流程並不會繼續執行下去。
 
 ```js
 gene.setCatchExceptionMode(true, (base, exception, exit, fail) => {
@@ -307,22 +351,27 @@ gene.setCatchExceptionMode(true, (base, exception, exit, fail) => {
 })
 ```
 
+---
+
 ### 未捕捉錯誤
 
-就算使用try-catc包覆，也無法catch非同步函數造成的錯誤，如果有這類的困擾，就使用UncaughtException吧
+就算使用try-catc包覆，也無法catch非同步函數造成的錯誤，如果有這類的困擾，就使用UncaughtException吧。
 
->錯誤後必需執行exit或fail，整個流程並不會繼續執行下去
+>錯誤後必需執行exit或fail，整個流程並不會繼續執行下去。
 
 ```js
 gene.setCatchUncaughtExceptionMode(true, (base, exception, exit, fail) => {
     fail(exception.message)
 })
 ```
+
+---
+
 ### 鹼基追蹤
 
-在每次執行完template後，自動深拷貝一個base在定義的函數中，並可以操作該template的status
+在每次執行完template後，自動深拷貝一個base在定義的函數中，並可以操作該template的status。
 
->深拷貝非常吃效能，請自行評估系統上線後是否關閉追蹤
+>深拷貝非常吃效能，請自行評估系統上線後是否關閉追蹤。
 
 ```js
 gene.setTraceBaseMode(true, (cloneBase, status) => {
@@ -330,9 +379,11 @@ gene.setTraceBaseMode(true, (cloneBase, status) => {
 })
 ```
 
+---
+
 ### 逾時處理
 
-整個流程如果大於設定時間(毫秒)，執行設定的函數
+整個流程如果大於設定時間(毫秒)，執行設定的函數。
 
 ```js
 gene.setTimeoutMode(true, 20000, (base, exit, fail) => {
@@ -340,23 +391,24 @@ gene.setTimeoutMode(true, 20000, (base, exit, fail) => {
 })
 ```
 
+---
 
 ## Messenger
 
 Messenger是Transcription後的完成品，它主要攜帶著整個系統的兩個核心 **base** 和 **status**。
 
-### Base
-
-base便是執行template中被不斷代入的物件，可以藉由getBase()打印出受保護的base。
+>可以藉由getBase()打印出受保護的base。
 
 ```js
 // if base {a: 5, $b: 10}
 gene.transcription().then((messenger) => {
     console.log(Object.keys(messenger.base)) // a
     console.log(Object.keys(messenger.getBase())) // a, $b
-    console.log(messenger.status) // 下方介紹
+    console.log(messenger.status)
 }
 ```
+
+---
 
 ## Status
 
@@ -364,30 +416,30 @@ status是整個系統堆蹤堆棧的核心，其實也是Nucleoid最初的目的
 
 >Messenger攜帶的status便是root status。
 
-### get
+---
+
+#### status.get()
 
 status需要解讀必須經由get()來取得該狀態序列化的結構。
 
-### addAttr
+#### status.addAttr(key, value)
 
-attributes是打印status中唯一的可自訂一接口，使用addAttr()來加入attribute
+attributes是打印status中唯一的可自定義接口，使用addAttr()來加入attribute。
 
 ```js
 status.addAttr('key', 'value')
 console.log(status.get().attributes.key) // value
 ```
 
-### report
+#### status.json()
 
-status中輸出可視報告有兩個接口，這兩接口會盡可能排除格式轉換間的錯誤
+回傳status樹狀結構的json文本。
 
-#### json()
+#### status.html()
 
-會輸出整個status樹狀結構的json文本。
+回傳一個html文本，雖然沒有json詳細，但更直觀。
 
-#### html()
-
-這會輸出一個html文本，雖然沒有json詳細，但更直觀。
+---
 
 ## Assembly
 
@@ -402,9 +454,13 @@ gene.setInitiation((base, skill, next, exit, fail) => {
 })
 ```
 
+---
+
 ## 支援環境(support)
 
-Nodejs 8+ or support ES6 browser
+Nodejs 8+ or support ES6 browser.
+
+---
 
 ## 其他
 [改版日誌](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/version.md)

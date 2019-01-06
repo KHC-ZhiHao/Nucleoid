@@ -71,10 +71,10 @@ class ModuleBase {
     /**
      * @function $protection(object,key,getter,value)
      * @desc 建立一個保護變數
-     * @param {*} object 保護變數必須要有一個目標物件
-     * @param {*} key 為目標物建立一個key
-     * @param {*} getter 這個保護變數被存入的外部物件
-     * @param {*} value 變數值
+     * @param {object} object 保護變數必須要有一個目標物件
+     * @param {string} key 為目標物建立一個key
+     * @param {object} getter 這個保護變數被存入的外部物件
+     * @param {any} value 變數值
      */
 
     $protection(object, key, getter, value) {

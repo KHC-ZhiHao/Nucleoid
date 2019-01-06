@@ -10,14 +10,14 @@ class Root extends ModuleBase {
         this.gene = gene
         this.name = gene.name
         this.base = {}
-        this.delay = 10
+        this.delay = 5
+        this.interval = null
         this.operating = typeof window === 'undefined' ? 'node' : 'browser'
         this.rootStatus = new Status(this.name, 'root')
         this.protection = {}
         this.carryStatus = null
         this.pollingEvents = []
         this.initBase()
-        this.initPolling()
     }
 
     get status() {
@@ -125,6 +125,9 @@ class Root extends ModuleBase {
      */
 
     polling(options) {
+        if (this.interval == null) {
+            this.initPolling()
+        }
         this.pollingEvents.push(new PollingEvent(this, options))
     }
 
@@ -158,7 +161,9 @@ class Root extends ModuleBase {
 
     close(success, message) {
         this.rootStatus.set(success, message)
-        clearInterval(this.interval)
+        if (this.interval) {
+            clearInterval(this.interval)
+        }
     }
 
 }

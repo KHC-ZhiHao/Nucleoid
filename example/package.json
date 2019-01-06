@@ -1,0 +1,10 @@
+{
+    "name": "nucleoid",
+    "version": "1.0.0",
+    "description": "template",
+    "dependencies": {
+        "joi": "14.3.1",
+        "nucleoid": "1.5.0",
+        "assemblyjs": "1.0.2"
+    }
+}
