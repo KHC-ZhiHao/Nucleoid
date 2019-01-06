@@ -42,15 +42,21 @@ server less給了我們雲端伺服器架構的藍圖，不再需要在程式碼
 
 基因是整個流程最高單位，你必須定義基因的週期與執行模板。
 
+#### web
 ```js
-//web
 var gene = Nucleoid.createGene()
+```
 
-//webpack
+#### webpack
+
+```js
 import Nucleoid from 'nucleoid'
 var gene = Nucleoid.createGene()
+```
 
-//nodejs
+#### nodejs
+
+```js
 var Nucleoid = require('nucleoid')
 var gene = Nucleoid.createGene()
 ```
