@@ -40,7 +40,7 @@ module.exports = function (name, request, response) {
 
     // 監聽Uncaught Exception
     gene.setCatchUncaughtExceptionMode(Config.debug, (base, exception, exit, fail) => {
-        base.$response.set(408, exception.message)
+        base.$response.set(500, exception.message)
         exit()
     })
 
