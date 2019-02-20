@@ -10,6 +10,7 @@ class Root extends ModuleBase {
         this.gene = gene
         this.name = gene.name
         this.base = {}
+        this.autos = []
         this.delay = 5
         this.interval = null
         this.operating = typeof window === 'undefined' ? 'node' : 'browser'
@@ -132,6 +133,15 @@ class Root extends ModuleBase {
     }
 
     /**
+     * @function auto(options)
+     * @desc 建立自動執行續
+     */
+
+    auto(options) {
+        this.autos.push(new Auto(this, options))
+    }
+
+    /**
      * @function clearPollingEvents()
      * @desc 清空宣告停止輪循的事件
      */
@@ -153,16 +163,38 @@ class Root extends ModuleBase {
     }
 
     /**
-     * @function close(success,message)
+     * @function close(success,message,callback)
      * @desc 完成Transcription後，關閉系統
      * @param {boolean} success 系統是否順利結束
+     * @param {boolean} force 是否強行關閉
      * @param {any} message 如果錯誤，是怎樣的錯誤
      */
 
-    close(success, message) {
-        this.rootStatus.set(success, message)
-        if (this.interval) {
-            clearInterval(this.interval)
+    close(success, message, force, callback) {
+        let close = () => {
+            this.rootStatus.set(success, message)
+            if (this.interval) {
+                clearInterval(this.interval)
+            }
+            callback()
+        }
+        if (force) {
+            close()
+        } else {
+            this.checkAutoOnload(close)
+        }
+    }
+
+    checkAutoOnload(callback) {
+        let check = this.autos.find((auto) => {
+            return auto.finish === false
+        })
+        if (check == null) {
+            callback()
+        } else {
+            setTimeout(() => {
+                this.checkAutoOnload(callback)
+            }, 10)
         }
     }
 

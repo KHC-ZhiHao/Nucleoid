@@ -13,6 +13,7 @@ class Transcription extends ModuleBase {
         this.finish = false
         this.reject = reject
         this.resolve = resolve
+        this.forceClose = false
         this.templates = this.gene.templates
         this.init()
         this.synthesis()
@@ -38,6 +39,7 @@ class Transcription extends ModuleBase {
             exit: this.exit.bind(this),
             fail: this.fail.bind(this),
             next: this.next.bind(this),
+            auto: this.root.auto.bind(this.root),
             cross: this.cross.bind(this),
             addBase: this.root.addBase.bind(this.root),
             polling: this.root.polling.bind(this.root),
@@ -51,6 +53,7 @@ class Transcription extends ModuleBase {
         if (this.gene.mode.timeout) {
             let system = this.gene.mode.timeout
             this.timeoutSystem = setTimeout(() => {
+                this.forceClose = true
                 this.root.createSystemStatus('timeout', true)
                 system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
             }, system.millisecond)
@@ -66,6 +69,7 @@ class Transcription extends ModuleBase {
         if( this.gene.mode.catchUncaughtException ){
             this.uncaughtExceptionAction = (error) => {
                 let exception = error.stack ? error : error.error
+                this.forceClose = true
                 this.root.createSystemStatus('uncaught exception', true, exception.stack)
                 this.gene.mode.catchUncaughtException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
             }
@@ -151,11 +155,14 @@ class Transcription extends ModuleBase {
     /**
      * @function getSkill()
      * @desc 獲取可用技能
-     * @returns {cross, polling, addBase, deepClone, createFragment}
+     * @returns {each, auto, cross, polling, addBase, deepClone, newFrag, createFragment}
      */
 
     getSkill() {
         return {
+            each: Supports.each,
+            auto: this.bind.auto,
+            frag: this.bind.createFragment,
             cross: this.bind.cross,
             polling: this.bind.polling,
             addBase: this.bind.addBase,
@@ -205,21 +212,23 @@ class Transcription extends ModuleBase {
     }
 
     /**
-     * @function close(success,message)
+     * @function close(success,message,callback)
      * @desc 不論是fail或exit都會處裡的邏輯層
      */
 
-    close(success, message) {
-        this.root.close(success, message)
-        if (this.timeoutSystem) {
-            clearTimeout(this.timeoutSystem)
-        }
-        if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
-            window.removeEventListener('error', this.uncaughtExceptionAction)
-        }
-        if (this.gene.synthesis.termination) {
-            this.gene.synthesis.termination.bind(this.case)(this.base, this.root.rootStatus);
-        }
+    close(success, message, callback) {
+        this.root.close(success, message, this.forceClose, () => {
+            if (this.timeoutSystem) {
+                clearTimeout(this.timeoutSystem)
+            }
+            if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
+                window.removeEventListener('error', this.uncaughtExceptionAction)
+            }
+            if (this.gene.synthesis.termination) {
+                this.gene.synthesis.termination.call(this.case, this.base, this.root.rootStatus);
+            }
+            callback()
+        })
     }
 
     /**
@@ -230,8 +239,9 @@ class Transcription extends ModuleBase {
     fail(error) {
         if (this.finish === false) {
             this.finish = true
-            this.close(false, error || 'unknown error')
-            this.reject(new Messenger(this.root))
+            this.close(false, error || 'unknown error', () => {
+                this.reject(new Messenger(this.root))
+            })
         }
     }
 
@@ -243,8 +253,9 @@ class Transcription extends ModuleBase {
     exit(message){
         if (this.finish === false) {
             this.finish = true
-            this.close(true, message)
-            this.resolve(new Messenger(this.root))
+            this.close(true, message, () => {
+                this.resolve(new Messenger(this.root))
+            })
         }
     }
 
@@ -287,6 +298,7 @@ class Transcription extends ModuleBase {
                 this.synthesisCatchUncaughtExceptionMode()
             } catch (exception) {
                 if (this.gene.mode.catchException) {
+                    this.forceClose = true
                     this.root.createSystemStatus('error catch', true, exception.stack)
                     this.gene.mode.catchException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
                 }

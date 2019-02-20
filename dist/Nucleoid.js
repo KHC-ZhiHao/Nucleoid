@@ -13,11 +13,49 @@
     }
 
 })(this || (typeof window !== 'undefined' ? window : global), function () {
+    class Supports {
 
+        /**
+         * @function each(target,callback)
+         * @desc 各種迴圈適應
+         * @callback (data,index|key)
+         */
+
+        static each(target, callback) {
+            if (Array.isArray(target)) {
+                var len = target.length;
+                for (let i = 0; i < len; i++) {
+                    var br = callback(target[i], i)
+                    if (br === "_break") { break }
+                    if (br === "_continue") { continue }
+                }
+                return
+            }
+            let type = typeof target
+            if (type === "object") {
+                for (let key in target) {
+                    var br = callback(target[key], key)
+                    if (br === "_break") { break }
+                    if (br === "_continue") { continue }
+                }
+                return
+            }
+            if (type === 'number') {
+                for (let i = 0; i < target; i++) {
+                    var br = callback(i, i)
+                    if (br === "_break") { break }
+                    if (br === "_continue") { continue }
+                }
+                return
+            }
+            this.systemError("each", "Each only support object, array, number.", target);
+        }
+
+    }
     /**
-    * @class ModuleBase()
-    * @desc 系統殼層
-    */
+     * @class ModuleBase()
+     * @desc 系統殼層
+     */
 
     class ModuleBase {
 
@@ -187,6 +225,7 @@
         use() {
             return {
                 add: this.add.bind(this),
+                eachAdd: this.eachAdd.bind(this),
                 activate: this.activate.bind(this)
             }
         }
@@ -203,6 +242,24 @@
                 name: [true, '#string'],
                 action: [true, '#function']
             }))
+        }
+
+        /**
+         * @function eachAdd(target,name,action)
+         * @public
+         * @desc 迭代加入frag
+         */
+
+        eachAdd(target, name = 'no name', action) {
+            Supports.each(target, (data, key) => {
+                this.add({
+                    name: name + `(${key})`,
+                    action: function (error, onload) {
+                        action(data, key, error, onload)
+                    }
+                })
+            })
+            return this.use()
         }
 
         /**
@@ -245,7 +302,7 @@
 
         actionThread(thread) {
             let func = async () => {
-                let status = new Status(thread.name, 'thread')
+                let status = new Status(thread.name, 'frag-thread')
                 let onload = this.regsterOnload(status)
                 let error = this.regsterError(status)
                 this.status.addChildren(status)
@@ -277,6 +334,119 @@
     }
 
     /**
+     * @class Auto(root, options)
+     * @desc 建立一個獨立的非同步執行續，在宣告結束前transcription不會結束
+     */
+
+    class Auto extends ModuleBase {
+
+        constructor(root, options) {
+            super('Auto')
+            this.name = options.name || 'No name'
+            this.root = root
+            this.status = new Status(this.name, 'auto')
+            this.action = this.createAction(options.action)
+            this.finish = false
+            this.init()
+        }
+
+        init() {
+            this.root.status.addChildren(this.status)
+            this.action(this.error.bind(this), this.onload.bind(this))
+        }
+
+        createAction(action) {
+            if (typeof action !== 'function') {
+                this.$systemError('createAction', 'Action not a function', action)
+            }
+            return async function (error, onload) {
+                action(error, onload)
+            }
+        }
+
+        error(error) {
+            this.finish = true
+            this.status.set(false, error)
+        }
+
+        onload() {
+            this.finish = true
+            this.status.set(true)
+        }
+
+    }
+    class Operon extends ModuleBase {
+
+        constructor(options) {
+            super('Operon')
+            this.data = this.$verify(options, {
+                units: [true, {}],
+                structure: [false, []]
+            })
+            this.validate()
+        }
+
+        get units() {
+            return this.data.units
+        }
+
+        validate() {
+            if (Array.isArray(this.data.structure) === false) {
+                this.$systemError('validate', `Structure not a array.`, this.data.structure)
+            }
+            for (let key in this.units) {
+                let unit = this.units[key]
+                if (unit.constructor == null || unit.prototype == null) {
+                    this.$systemError('validate', 'Unit not a constructor.', key)
+                }
+                let prototypes = Object.getOwnPropertyNames(unit.prototype)
+                for (let name of this.data.structure) {
+                    if (prototypes.includes(name) === false) {
+                        this.$systemError('validate', `Property(${name}) not found.`, name)
+                    }
+                }
+            }
+        }
+
+        use(name, options) {
+            let context = this.createContext(name, options)
+            let unit = this.getUnit(name)
+            return this.useUnit(unit, context)
+        }
+
+        createContext(name, options) {
+            return {
+                data: options,
+                useName: name
+            }
+        }
+
+        useUnit(unit, context) {
+            let target = new unit(context)
+            let output = {}
+            for (let key of this.data.structure) {
+                output[key] = target[key].bind(target)
+            }
+            return output
+        }
+
+        getUnit(name) {
+            if (this.data.units[name]) {
+                return this.data.units[name]
+            } else {
+                this.$systemError('getUnit', 'Unit not found.', name)
+            }
+        }
+
+        exports() {
+            return {
+                use: this.use.bind(this)
+            }
+        }
+
+    }
+
+    /**
      * @class Root
      * @desc Gene執行Transcription時，掌控Status和Polling的源頭
      */
@@ -288,6 +458,7 @@
             this.gene = gene
             this.name = gene.name
             this.base = {}
+            this.autos = []
             this.delay = 5
             this.interval = null
             this.operating = typeof window === 'undefined' ? 'node' : 'browser'
@@ -410,6 +581,15 @@
         }
 
         /**
+         * @function auto(options)
+         * @desc 建立自動執行續
+         */
+
+        auto(options) {
+            this.autos.push(new Auto(this, options))
+        }
+
+        /**
          * @function clearPollingEvents()
          * @desc 清空宣告停止輪循的事件
          */
@@ -431,16 +611,38 @@
         }
 
         /**
-         * @function close(success,message)
+         * @function close(success,message,callback)
          * @desc 完成Transcription後，關閉系統
          * @param {boolean} success 系統是否順利結束
+         * @param {boolean} force 是否強行關閉
          * @param {any} message 如果錯誤，是怎樣的錯誤
          */
 
-        close(success, message) {
-            this.rootStatus.set(success, message)
-            if (this.interval) {
-                clearInterval(this.interval)
+        close(success, message, force, callback) {
+            let close = () => {
+                this.rootStatus.set(success, message)
+                if (this.interval) {
+                    clearInterval(this.interval)
+                }
+                callback()
+            }
+            if (force) {
+                close()
+            } else {
+                this.checkAutoOnload(close)
+            }
+        }
+
+        checkAutoOnload(callback) {
+            let check = this.autos.find((auto) => {
+                return auto.finish === false
+            })
+            if (check == null) {
+                callback()
+            } else {
+                setTimeout(() => {
+                    this.checkAutoOnload(callback)
+                }, 10)
             }
         }
 
@@ -511,7 +713,6 @@
         }
 
     }
-
     /**
      * @class Status()
      * @desc 堆棧狀態
@@ -523,6 +724,7 @@
             super("Status")
             this.name = name || 'no name'
             this.type = type || 'no type'
+            this.detail = null
             this.message = ''
             this.success = false
             this.children = []
@@ -545,6 +747,19 @@
         }
 
         /**
+         * @function installDetail()
+         * @desc 顯示更多資訊
+         */
+
+        installDetail() {
+            if (this.detail == null) {
+                this.detail = {
+                    operationTime: this.operationTime
+                }
+            }
+        }
+
+        /**
          * @function set(success,message)
          * @desc 當該狀態的模式進行到一個終點，設定成功與否和訊息
          */
@@ -552,8 +767,9 @@
         set(success, message = '') {
             if (this.finishTime == null) {
                 this.success = success
-                this.message = message
+                this.message = message instanceof Error ? message.stack : message
                 this.finishTime = Date.now()
+                this.installDetail()
             }
             return this
         }
@@ -567,21 +783,27 @@
             let data = {
                 name: this.name,
                 type: this.type,
+                detail: this.detail,
                 message: this.message,
                 success: this.success,
                 attributes: this.attributes,
-                operationTime: this.operationTime,
-                totalOperationTime: 0,
                 children: []
             }
             for (let child of this.children) {
                 data.children.push(child.get())
-                data.totalOperationTime += child.operationTime
             }
             return data
         }
 
+        /**
+         * @function inspect()
+         * @desc 移除迴圈結構的物件
+         */
+
         inspect(target, used = []) {
+            if (target == null) {
+                return null
+            }
             let output = Array.isArray(target) ? [] : {}
             for (let key in target) {
                 let aims = target[key]
@@ -604,13 +826,18 @@
 
         /**
          * @function json()
-         * @desc 取得序列化參數並轉呈json文本
+         * @desc 取得序列化參數並轉為json文本
          */
 
         json() {
             let data = this.inspect(this.get())
             return JSON.stringify(data, null, 4)
         }
+
+        /**
+         * @function html()
+         * @desc 取得序列化參數並轉成html文本
+         */
 
         html() {
             let data = this.inspect(this.get())
@@ -619,9 +846,12 @@
                 let html = `<div style="padding:5px; margin: 5px; border:${border}">`
                 html += `<div>type : ${status.type}</div>`
                 html += `<div>name : ${status.name}</div>`
-                html += `<div>operation time : ${status.operationTime}</div>`
-                html += `<div>total operation time : ${status.totalOperationTime}</div>`
                 html += status.message ? `<div>message : <br><pre>${status.message}</pre></div>` : ''
+                if (status.detail) {
+                    html += `<div>detail : `
+                    html += `<pre>${JSON.stringify(status.detail, null, 4)}</pre>`
+                    html += `</div>`
+                }
                 for (let key in status.attributes) {
                     html += `<div> attributes(${key}) : `
                     html += `<pre>${JSON.stringify(status.attributes[key], null, 4)}</pre>`
@@ -659,7 +889,7 @@
 
     class Gene extends ModuleBase {
 
-        constructor(name) {
+        constructor(name, options) {
             super("Gene")
             this.setName(name || 'no name')
             this.templates = []
@@ -674,6 +904,58 @@
                 initiation: null,
                 elongation: null,
                 termination: null
+            }
+            if (options) {
+                this.setOptions(options)
+            }
+        }
+
+        setOptions(options) {
+            if (typeof options !== 'object') {
+                this.$systemError('setOptions', 'Options not a object.', options)
+            }
+            if (options.timeoutMode) {
+                let t = options.timeoutMode
+                this.setTimeoutMode(t.enable, t.ms, t.action)
+            }
+            if (options.catchMode) {
+                let t = options.catchMode
+                this.setCatchExceptionMode(t.enable, t.action)
+            }
+            if (options.uncaughtCatchMode) {
+                let t = options.uncaughtCatchMode
+                this.setCatchUncaughtExceptionMode(t.enable, t.action)
+            }
+            if (options.traceBaseMode) {
+                let t = options.traceBaseMode
+                this.setTraceBaseMode(t.enable, t.action)
+            }
+            if (options.initiation && options.initiation.enable !== false) {
+                this.setInitiation(options.initiation.action)
+            }
+            if (options.elongation && options.elongation.enable !== false) {
+                this.setElongation(options.elongation.action)
+            }
+            if (options.termination && options.termination.enable !== false) {
+                this.setTermination(options.termination.action)
+            }
+            if (options.genetic && options.genetic.enable !== false) {
+                this.setGenetic(options.genetic.action)
+            }
+            if (options.templates) {
+                this.cloning(options.templates)
+            }
+        }
+
+        addName(name) {
+            if (typeof name === "string") {
+                if (this.name === 'no name') {
+                    this.name = name
+                } else {
+                    this.name += '-' + name
+                }
+            } else {
+                this.$systemError('addName', 'Name not a string.', name)
             }
         }
 
@@ -692,7 +974,7 @@
 
         /**
          * @function setTraceBaseMode(enable,action)
-         * @desc 鹼基追蹤模式，將每個template的鹼基變化紀錄下來，注意!這功能將強暴你的效能!
+         * @desc 鹼基追蹤模式，將每個template的鹼基變化紀錄下來，這功能將吞噬你的效能，僅適用於測試
          * @param {function} action (cloneBase, nowStatus)
          */
 
@@ -724,7 +1006,7 @@
 
         /** 
          * @function setCatchExceptionMode(enable,action)
-         * @desc 設定捕捉Exception模式
+         * @desc 設定捕捉Exception模式，這功能將吞噬你的效能，僅適用於測試
          * @param {function} action (base, exception, exit, fail)
          */
 
@@ -823,6 +1105,34 @@
         }
 
         /** 
+         * @function cloning(templates)
+         * @desc 複用template的接口
+         */
+
+        cloning(templates) {
+            if (typeof templates === 'object') {
+                for (let key in templates) {
+                    if (typeof templates[key] === 'function') {
+                        this.template(key, templates[key])
+                    } else {
+                        this.$systemError('cloning', 'template data not a function.', key)
+                    }
+                }
+            } else {
+                this.$systemError('cloning', 'Template not a object.');
+            }
+        }
+
+        /** 
+         * @function clearTemplate()
+         * @desc 清空模板
+         */
+
+        clearTemplate() {
+            this.templates = []
+        }
+
+        /** 
          * @function transcription()
          * @desc 執行系統，不論錯誤或成功皆會回傳一個Messenger物件
          * @returns {Promise}
@@ -851,6 +1161,7 @@
             this.finish = false
             this.reject = reject
             this.resolve = resolve
+            this.forceClose = false
             this.templates = this.gene.templates
             this.init()
             this.synthesis()
@@ -876,6 +1187,7 @@
                 exit: this.exit.bind(this),
                 fail: this.fail.bind(this),
                 next: this.next.bind(this),
+                auto: this.root.auto.bind(this.root),
                 cross: this.cross.bind(this),
                 addBase: this.root.addBase.bind(this.root),
                 polling: this.root.polling.bind(this.root),
@@ -889,6 +1201,7 @@
             if (this.gene.mode.timeout) {
                 let system = this.gene.mode.timeout
                 this.timeoutSystem = setTimeout(() => {
+                    this.forceClose = true
                     this.root.createSystemStatus('timeout', true)
                     system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
                 }, system.millisecond)
@@ -904,6 +1217,7 @@
             if (this.gene.mode.catchUncaughtException) {
                 this.uncaughtExceptionAction = (error) => {
                     let exception = error.stack ? error : error.error
+                    this.forceClose = true
                     this.root.createSystemStatus('uncaught exception', true, exception.stack)
                     this.gene.mode.catchUncaughtException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
                 }
@@ -989,11 +1303,14 @@
         /**
          * @function getSkill()
          * @desc 獲取可用技能
-         * @returns {cross, polling, addBase, deepClone, createFragment}
+         * @returns {each, auto, cross, polling, addBase, deepClone, newFrag, createFragment}
          */
 
         getSkill() {
             return {
+                each: Supports.each,
+                auto: this.bind.auto,
+                frag: this.bind.createFragment,
                 cross: this.bind.cross,
                 polling: this.bind.polling,
                 addBase: this.bind.addBase,
@@ -1043,21 +1360,23 @@
         }
 
         /**
-         * @function close(success,message)
+         * @function close(success,message,callback)
          * @desc 不論是fail或exit都會處裡的邏輯層
          */
 
-        close(success, message) {
-            this.root.close(success, message)
-            if (this.timeoutSystem) {
-                clearTimeout(this.timeoutSystem)
-            }
-            if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
-                window.removeEventListener('error', this.uncaughtExceptionAction)
-            }
-            if (this.gene.synthesis.termination) {
-                this.gene.synthesis.termination.bind(this.case)(this.base, this.root.rootStatus);
-            }
+        close(success, message, callback) {
+            this.root.close(success, message, this.forceClose, () => {
+                if (this.timeoutSystem) {
+                    clearTimeout(this.timeoutSystem)
+                }
+                if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
+                    window.removeEventListener('error', this.uncaughtExceptionAction)
+                }
+                if (this.gene.synthesis.termination) {
+                    this.gene.synthesis.termination.call(this.case, this.base, this.root.rootStatus);
+                }
+                callback()
+            })
         }
 
         /**
@@ -1068,8 +1387,9 @@
         fail(error) {
             if (this.finish === false) {
                 this.finish = true
-                this.close(false, error || 'unknown error')
-                this.reject(new Messenger(this.root))
+                this.close(false, error || 'unknown error', () => {
+                    this.reject(new Messenger(this.root))
+                })
             }
         }
 
@@ -1081,8 +1401,9 @@
         exit(message) {
             if (this.finish === false) {
                 this.finish = true
-                this.close(true, message)
-                this.resolve(new Messenger(this.root))
+                this.close(true, message, () => {
+                    this.resolve(new Messenger(this.root))
+                })
             }
         }
 
@@ -1125,6 +1446,7 @@
                     this.synthesisCatchUncaughtExceptionMode()
                 } catch (exception) {
                     if (this.gene.mode.catchException) {
+                        this.forceClose = true
                         this.root.createSystemStatus('error catch', true, exception.stack)
                         this.gene.mode.catchException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
                     }
@@ -1165,8 +1487,19 @@
          * @desc 建立一個Gene
          */
 
-        static createGene(name) {
-            return new Gene(name)
+        static createGene(name, options) {
+            return new Gene(name, options)
+        }
+
+        /**
+         * @function createOperon(type,options)
+         * @static
+         * @desc 建立Operon
+         */
+
+        static createOperon(options) {
+            let operon = new Operon(options)
+            return operon.exports()
         }
 
     }

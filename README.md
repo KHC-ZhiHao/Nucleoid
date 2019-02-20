@@ -4,17 +4,21 @@
 
 ## 簡介 (Summary)
 
-Nucleoid是基於Promise的一個流程控制系統，早期目的就是為了處裡server less中cloud function太難追蹤堆棧和錯誤的問題，但現在它具有一個完整的生命週期，能協助RESTful API模式，例如Request與Response。
+Nucleoid是基於Promise的一個流程控制系統，早期目的就是為了處裡server less中cloud function太難追蹤堆棧和錯誤的問題，但現在它具有一個完整的生命週期與友善的非同步操作、堆棧追蹤等，能協助各種雲端架構模式，例如RESTful API的Request與Response。
 
 Nucleoid is a Promise based process control system. The early purpose was to make it difficult to track stacks and errors in the cloud function, but now it has a complete life cycle and can help with RESTful APIs such as Request and Response.
 
-[RESTful API Example](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/example)
+>Nucleoid是因應cloud function而生，但實際上不一定得用在這個領域，畢竟本質是一個流程控制的系統。
 
->範例採用了[Joi](https://github.com/hapijs/joi)作為驗證的模塊。
+## 範例(Example)
 
->Nucleoid是因應cloud function而生，但實際上不一定得用在這個領域，畢竟只是一個流程控制的系統。
+因為Nucleoid越來越複雜，Readme已經難以加入說明，補足文件和範例看來是必要的了。
 
->Nucleoid的建構模式與命名來自細胞生物學中基因表現"轉錄"的過程。
+[Example](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/example)
+
+>範例採用了[joi](https://github.com/hapijs/joi)模塊作為驗證的工具。
+
+>範例採用了[packhouse](https://github.com/KHC-ZhiHao/Packhouse)模塊作model使用。
 
 ## 安裝
 
@@ -224,6 +228,8 @@ Skill扮演了一個helper的腳色，它穿梭於整個模板中，幫你度過
 
 fragment在宣告activate時，會同步執行所有被加入的function，每個function都會被加入一個status，並等待所有function都呼叫onload或其中一隻呼叫error時執行callback。
 
+> 1.5.1版本支援skill.frag()，效果與createFragment相同
+
 ```js
 gene.template('use fragment', (base, skill, next, exit, fail) => {
     let fragment = skill.createFragment('add count')
@@ -246,6 +252,47 @@ gene.template('use fragment', (base, skill, next, exit, fail) => {
         console.log(base.count) // 2
         next()
     })
+})
+```
+
+#### 迭代加入片段
+
+使用eachAdd迭代加入片段，eachAdd會回傳自身frag，協助優化代碼。
+
+```js
+gene.template('Fragment eachAdd', (base, skill, next, exit, fail) => {
+    base.fragmentEachAdd = 0
+    skill.frag('eachAdd').eachAdd([1,2,3,4], 'name', (data, index, err, onload) => {
+        base.fragmentEachAdd += data
+        onload()
+    }).activate((error) => {
+        next()
+    })
+})
+```
+
+---
+
+### 自動處理
+
+Auto能夠離開template的運作邏輯，在沒有宣告onload之前，Transcription不會結束。
+
+```js
+gene.template('use auto', (base, skill, next, exit, fail) => {
+    skill.auto({
+        name: 'auto',
+        action(error, onload) {
+            setTimeout(() => {
+                base.auto = true
+                onload()
+            }, 2000)
+        }
+    })
+    next()
+})
+gene.transcription().then((messenger) => {
+    // wait 2000ms
+    console.log(messenger.base.atuo)
 })
 ```
 
@@ -333,6 +380,81 @@ gene.template('use set status attr', (base, skill, next, exit, fail) => {
     skill.setStatusAttr('now', 5)
     // 記載根狀態的狀態
     skill.setRootStatusAttr('root', 10)
+    next()
+})
+```
+
+---
+
+### 迭代器
+
+到哪都能看見的each，且是同步的。
+
+```js
+gene.template('use each', (base, skill, next, exit, fail) => {
+    skill.each([1,2,3,4], (data, index) => {
+        console.log(data) // 1,2,3,4
+    })
+    next()
+})
+```
+
+---
+
+## 操控子 Operon
+
+Operon為建立統一IO狀態模式的物件，協助規範class和接口，簡潔在邏輯層需要的配置。
+
+### class
+
+```js
+
+    class Request {
+
+        constructor(context) {
+            // context = { data 可以外部傳進實例化的class }
+            this.complete = false
+        }
+
+        set() {
+            this.complete = true
+        }
+
+        isSet() {
+            return this.complete
+        }
+
+    }
+
+    //if Event like Request, have some prototype...
+
+```
+
+### operon
+
+```js
+let operon = Nucleoid.createOperon({
+    structure: ['set', 'isSet'],
+    units: {
+        request: Request,
+        event: Event
+    }
+})
+```
+
+### gene
+
+```js
+gene.setGenetic(() => {
+    return {
+        $io: operon.use('request', contextData)
+    }
+})
+
+gene.setElongation((base, exit, fail) => {
+    if (base.$io.isSet()) {
+        exit()
+    }
 })
 ```
 
@@ -340,7 +462,7 @@ gene.template('use set status attr', (base, skill, next, exit, fail) => {
 
 ## 監聽模式
 
-雖然我仍然建議再有疑慮的邏輯中加入try-catch來做例外處裡，但用全域處理比較好debug就是了...
+Nucleoid將協助你監聽每個template的狀態，加速開發除錯。
 
 ---
 
@@ -350,6 +472,8 @@ gene.template('use set status attr', (base, skill, next, exit, fail) => {
 當發現錯誤，執行該函數。
 
 >錯誤後必需執行exit或fail，整個流程並不會繼續執行下去。
+
+>該模式會強制宣告try-catch在每個template內，建議勿使用於production版本內。
 
 ```js
 gene.setCatchExceptionMode(true, (base, exception, exit, fail) => {
@@ -447,21 +571,6 @@ console.log(status.get().attributes.key) // value
 
 ---
 
-## Assembly
-
-[Assembly](https://github.com/KHC-ZhiHao/Assembly)是一個基於functional programming概念所編寫的函數包裝器，其實它是由本系統額外延伸的函示庫，在整個基因表現的過程中，Assembly有如扮演著酵素的腳色，能減輕整個Nucleoid建構的負擔。
-
-```js
-// 可以在Initiation中將Assembly引入
-let Assembly = require('assemblyjs')
-let factory = new Assembly()
-gene.setInitiation((base, skill, next, exit, fail) => {
-    skill.addBase('$factory', factory)
-})
-```
-
----
-
 ## 支援環境(support)
 
 Nodejs 8+ or support ES6 browser.
@@ -469,7 +578,7 @@ Nodejs 8+ or support ES6 browser.
 ---
 
 ## 其他
-[改版日誌](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/version.md)
+[版本日誌](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/version.md)
 
 [npm-image]: https://img.shields.io/npm/v/nucleoid.svg
 [npm-url]: https://npmjs.org/package/nucleoid

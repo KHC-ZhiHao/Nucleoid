@@ -11,8 +11,19 @@ class Nucleoid {
      * @desc 建立一個Gene
      */
 
-    static createGene(name) {
-        return new Gene(name)
+    static createGene(name, options) {
+        return new Gene(name, options)
+    }
+
+    /**
+     * @function createOperon(type,options)
+     * @static
+     * @desc 建立Operon
+     */
+
+    static createOperon(options) {
+        let operon = new Operon(options)
+        return operon.exports()
     }
 
 }

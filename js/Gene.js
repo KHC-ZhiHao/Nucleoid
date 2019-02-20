@@ -5,7 +5,7 @@
 
 class Gene extends ModuleBase {
 
-    constructor(name){
+    constructor(name, options){
         super("Gene")
         this.setName(name || 'no name')
         this.templates = []
@@ -21,6 +21,58 @@ class Gene extends ModuleBase {
             elongation: null,
             termination: null
         }
+        if (options) {
+            this.setOptions(options)
+        }
+    }
+
+    setOptions(options) {
+        if (typeof options !== 'object') {
+            this.$systemError('setOptions', 'Options not a object.', options)
+        }
+        if (options.timeoutMode) {
+            let t = options.timeoutMode
+            this.setTimeoutMode(t.enable, t.ms, t.action)
+        }
+        if (options.catchMode) {
+            let t = options.catchMode
+            this.setCatchExceptionMode(t.enable, t.action)
+        }
+        if (options.uncaughtCatchMode) {
+            let t = options.uncaughtCatchMode
+            this.setCatchUncaughtExceptionMode(t.enable, t.action)
+        }
+        if (options.traceBaseMode) {
+            let t = options.traceBaseMode
+            this.setTraceBaseMode(t.enable, t.action)
+        }
+        if (options.initiation && options.initiation.enable !== false) {
+            this.setInitiation(options.initiation.action)
+        }
+        if (options.elongation && options.elongation.enable !== false) {
+            this.setElongation(options.elongation.action)
+        }
+        if (options.termination && options.termination.enable !== false) {
+            this.setTermination(options.termination.action)
+        }
+        if (options.genetic && options.genetic.enable !== false) {
+            this.setGenetic(options.genetic.action)
+        }
+        if (options.templates) {
+            this.cloning(options.templates)
+        }
+    }
+
+    addName(name) {
+        if( typeof name === "string" ){
+            if (this.name === 'no name') {
+                this.name = name
+            } else {
+                this.name += '-' + name
+            }
+        } else {
+            this.$systemError('addName', 'Name not a string.', name)
+        }
     }
 
     /**
@@ -28,7 +80,7 @@ class Gene extends ModuleBase {
      * @desc 設定名稱
      */
 
-    setName(name){
+    setName(name) {
         if( typeof name === "string" ){
             this.name = name;
         } else {
@@ -38,7 +90,7 @@ class Gene extends ModuleBase {
 
     /**
      * @function setTraceBaseMode(enable,action)
-     * @desc 鹼基追蹤模式，將每個template的鹼基變化紀錄下來，注意!這功能將強暴你的效能!
+     * @desc 鹼基追蹤模式，將每個template的鹼基變化紀錄下來，這功能將吞噬你的效能，僅適用於測試
      * @param {function} action (cloneBase, nowStatus)
      */
 
@@ -70,7 +122,7 @@ class Gene extends ModuleBase {
 
     /** 
      * @function setCatchExceptionMode(enable,action)
-     * @desc 設定捕捉Exception模式
+     * @desc 設定捕捉Exception模式，這功能將吞噬你的效能，僅適用於測試
      * @param {function} action (base, exception, exit, fail)
      */
 
@@ -166,6 +218,34 @@ class Gene extends ModuleBase {
         }else{
             this.$systemError('setTermination', 'Params type error, try setTermination(function).' );
         }
+    }
+
+    /** 
+     * @function cloning(templates)
+     * @desc 複用template的接口
+     */
+
+    cloning(templates) {
+        if (typeof templates === 'object') {
+            for (let key in templates) {
+                if (typeof templates[key] === 'function') {
+                    this.template(key, templates[key])
+                } else {
+                    this.$systemError('cloning', 'template data not a function.', key)
+                }
+            }
+        } else {
+            this.$systemError('cloning', 'Template not a object.' );
+        }
+    }
+
+    /** 
+     * @function clearTemplate()
+     * @desc 清空模板
+     */
+
+    clearTemplate() {
+        this.templates = []
     }
 
     /** 

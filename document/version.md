@@ -52,3 +52,35 @@
 ### MODIFY
 
 * Polling => 如果整個模板中沒有呼叫過輪詢，interval不會被啟動
+
+## 1.5.1
+
+### INFO
+
+以秒計費的時代，我們需要更多的迭代，更多的非同步操作！
+
+為了統一io，現在有operons來模擬類似狀態機的模式，但因為cloud function的可能性太多了，必須預留彈性，沒有規範實在太糟糕了:(
+
+由於Nucleoid越來越有複雜化的趨勢，是時候安排重構了。
+
+### NEW
+
+* Skill => each : 一個通用的迭代器
+* Skill => auto : 新的外部執行續，在宣告結束前tarnscription不會結束，但錯誤擲出的模式會強行略過auto的執行
+* Skill => frag : createFragment比較簡短的宣告
+* Fragment => eachAdd : 迭代加入非同步片段
+* Operon : 統一狀態IO
+* Gene => cloning : 可通用模板接口
+* Gene : 第二個參數options將協助定義行為，提供更直觀的閱讀模式
+* Gene => addName : 允許我們對name添加前綴
+* Gene => clearTemplate: 清空模板
+
+### FIX
+
+* Status => remove totalOperationTime : root的時間和總時間一樣，不曉得還放這個的目的是什麼
+
+### MODIFY
+
+* Status => detail : 把某些狀態移至detail
+* Status => message : 在message是Error物件時，顯示stack
+* 移除babel與minify改用uglifyJS，代表版本不再向下支援至es5

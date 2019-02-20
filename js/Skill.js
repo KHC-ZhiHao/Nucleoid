@@ -76,6 +76,7 @@ class Fragment extends ModuleBase {
     use() {
         return {
             add: this.add.bind(this),
+            eachAdd: this.eachAdd.bind(this),
             activate: this.activate.bind(this)
         }
     }
@@ -92,6 +93,24 @@ class Fragment extends ModuleBase {
             name: [true, '#string'],
             action: [true, '#function'] 
         }))
+    }
+
+    /**
+     * @function eachAdd(target,name,action)
+     * @public
+     * @desc 迭代加入frag
+     */
+
+    eachAdd(target, name = 'no name', action) {
+        Supports.each(target, (data, key) => {
+            this.add({
+                name: name + `(${key})`,
+                action: function (error, onload) {
+                    action(data, key, error, onload)
+                }
+            })
+        })
+        return this.use()
     }
 
     /**
@@ -134,7 +153,7 @@ class Fragment extends ModuleBase {
 
     actionThread(thread) {
         let func = async() => {
-            let status = new Status(thread.name, 'thread')
+            let status = new Status(thread.name, 'frag-thread')
             let onload = this.regsterOnload(status)
             let error = this.regsterError(status)
             this.status.addChildren(status)
@@ -161,6 +180,49 @@ class Fragment extends ModuleBase {
         this.activate = () => {
             this.$systemError('activate', `This template(${this.name}) already  called`)
         }
+    }
+
+}
+
+/**
+ * @class Auto(root, options)
+ * @desc 建立一個獨立的非同步執行續，在宣告結束前transcription不會結束
+ */
+
+class Auto extends ModuleBase {
+
+    constructor(root, options) {
+        super('Auto')
+        this.name = options.name || 'No name'
+        this.root = root
+        this.status = new Status(this.name, 'auto')
+        this.action = this.createAction(options.action)
+        this.finish = false
+        this.init()
+    }
+
+    init() {
+        this.root.status.addChildren(this.status)
+        this.action(this.error.bind(this), this.onload.bind(this))
+    }
+
+    createAction(action) {
+        if (typeof action !== 'function') {
+            this.$systemError('createAction', 'Action not a function', action)
+        }
+        return async function (error, onload) {
+            action(error, onload)
+        }
+    }
+
+    error(error) {
+        this.finish = true
+        this.status.set(false, error)
+    }
+
+    onload() {
+        this.finish = true
+        this.status.set(true)
     }
 
 }
