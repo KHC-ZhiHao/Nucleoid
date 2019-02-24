@@ -16,12 +16,8 @@ class ModuleBase {
      * @desc 於console呼叫錯誤，中斷程序並顯示錯誤的物件
      */
 
-    $systemError(functionName, message, object = '$_no_error'){
-        if( object !== '$_no_error' ){
-            console.log( `%c error : `, 'color:#FFF; background:red' )
-            console.log( object )
-        }
-        throw new Error(`(☉д⊙)!! Nucleoid::${this.$moduleBase.name} => ${functionName} -> ${message}`)
+    $systemError(functionName, message, object){
+        Supports.systemError(this.$moduleBase.name, functionName, message, object)
     }
 
     /**
@@ -30,12 +26,12 @@ class ModuleBase {
      * @returns {boolean} 如果沒有，回傳true，如果有則報錯
      */
 
-    $noKey( functionName, target, key ) {
+    $noKey(functionName, target, key) {
         if (target[key] == null) {
-            return true;
+            return true
         } else {
-            this.$systemError( functionName, 'Name already exists.', key );
-            return false;
+            this.$systemError(functionName, `Name(${key}) already exists.`)
+            return false
         } 
     }
 
@@ -79,11 +75,11 @@ class ModuleBase {
 
     $protection(object, key, getter, value) {
         getter[key] = value
-        Object.defineProperty( object, key, {
-            set: ()=>{
-                this.$systemError('protection', "This key is a private key, can't be change.", key );
+        Object.defineProperty(object, key, {
+            set: () => {
+                this.$systemError('protection', "This key is a private key, can't be change.", key)
             },
-            get: ()=>{
+            get: () => {
                 return getter[key]
             },
         })

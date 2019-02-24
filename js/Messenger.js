@@ -46,20 +46,7 @@ class Messenger {
      */
 
     getMode(){
-        let mode = [];
-        if (this.gene.mode.catchException) {
-            mode.push('try-catch-mode')
-        }
-        if (this.gene.mode.timeout) {
-            mode.push('timeout')
-        }
-        if (this.gene.mode.catchUncaughtException) {
-            mode.push('uncaught-exception-mode')
-        }
-        if (this.gene.mode.traceBase) {
-            mode.push('trace-base-mode')
-        }
-        return mode
+        return this.gene.mode.used()
     }
 
 }

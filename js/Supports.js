@@ -33,7 +33,19 @@ class Supports {
             }
             return
         }
-        this.systemError("each", "Each only support object, array, number.", target);
+        Supports.systemError("Supports", "each", "Each only support object, array, number.", target);
+    }
+
+    /**
+     * @function systemError
+     * @description 執出錯誤訊息
+     */
+
+    static systemError(name, functionName, message, object = '$_no_error'){
+        if (object !== '$_no_error') {
+            console.log('error data => ', object )
+        }
+        throw new Error(`(☉д⊙)!! Nucleoid::${name} => ${functionName} -> ${message}`)
     }
 
 }

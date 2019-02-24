@@ -4,7 +4,7 @@ class Operon extends ModuleBase {
         super('Operon')
         this.data = this.$verify(options, {
             units: [true, {}],
-            structure: [false, []] 
+            structure: [true, []] 
         })
         this.validate()
     }
@@ -67,4 +67,17 @@ class Operon extends ModuleBase {
         }
     }
 
+}
+
+function getAllPrototype(target) {
+    let prototypes = []
+    if (target.prototype) {
+        prototypes = Object.getOwnPropertyNames(target.prototype)
+    }
+    if (target.__proto__) {
+        prototypes = prototypes.concat(getAllPrototype(target.__proto__))
+    }
+    return prototypes.filter((text, index, arr) => {
+        return arr.indexOf(text) === index && text !== 'constructor'
+    })
 }

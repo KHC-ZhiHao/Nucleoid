@@ -8,68 +8,62 @@ class Gene extends ModuleBase {
     constructor(name, options){
         super("Gene")
         this.setName(name || 'no name')
+        this.mode = (new Mode()).exports()
+        this.alias = null
         this.templates = []
-        this.genetic = null
-        this.mode = {
-            timeout: null,
-            traceBase: null,
-            catchException: null,
-            catchUncaughtException: null
-        }
-        this.synthesis = {
-            initiation: null,
-            elongation: null,
-            termination: null
-        }
-        if (options) {
-            this.setOptions(options)
-        }
+        this.setOptions(options)
     }
 
-    setOptions(options) {
+    get name() {
+        return this.mainName + (this.alias || '')
+    }
+
+    /**
+     * @function setOptions(options)
+     * @desc 當實體化時帶有options時，執行設定動作
+     */
+
+    setOptions(options = {}) {
         if (typeof options !== 'object') {
             this.$systemError('setOptions', 'Options not a object.', options)
         }
         if (options.timeoutMode) {
-            let t = options.timeoutMode
-            this.setTimeoutMode(t.enable, t.ms, t.action)
+            this.mode.set('timeout', options.timeoutMode)
         }
         if (options.catchMode) {
-            let t = options.catchMode
-            this.setCatchExceptionMode(t.enable, t.action)
+            this.mode.set('try-catch-mode', options.catchMode)
         }
         if (options.uncaughtCatchMode) {
-            let t = options.uncaughtCatchMode
-            this.setCatchUncaughtExceptionMode(t.enable, t.action)
+            this.mode.set('uncaught-exception-mode', options.uncaughtCatchMode)
         }
         if (options.traceBaseMode) {
-            let t = options.traceBaseMode
-            this.setTraceBaseMode(t.enable, t.action)
+            this.mode.set('trace-base-mode', options.traceBaseMode)
         }
-        if (options.initiation && options.initiation.enable !== false) {
-            this.setInitiation(options.initiation.action)
+        if (options.initiation) {
+            this.mode.set('initiation', options.initiation)
         }
-        if (options.elongation && options.elongation.enable !== false) {
-            this.setElongation(options.elongation.action)
+        if (options.elongation) {
+            this.mode.set('elongation', options.elongation)
         }
-        if (options.termination && options.termination.enable !== false) {
-            this.setTermination(options.termination.action)
+        if (options.termination) {
+            this.mode.set('termination', options.termination)
         }
-        if (options.genetic && options.genetic.enable !== false) {
-            this.setGenetic(options.genetic.action)
+        if (options.genetic) {
+            this.mode.set('genetic', options.genetic)
         }
         if (options.templates) {
             this.cloning(options.templates)
         }
     }
 
+    /**
+     * @function addName
+     * @desc 名稱尾端追加名稱，會一直疊加下去
+     */
+
     addName(name) {
-        if( typeof name === "string" ){
-            if (this.name === 'no name') {
-                this.name = name
-            } else {
-                this.name += '-' + name
-            }
+        if (typeof name === "string") {
+            this.mainName += '-' + name
         } else {
             this.$systemError('addName', 'Name not a string.', name)
         }
@@ -81,88 +75,73 @@ class Gene extends ModuleBase {
      */
 
     setName(name) {
-        if( typeof name === "string" ){
-            this.name = name;
+        if (typeof name === "string") {
+            this.mainName = name
         } else {
             this.$systemError('setName', 'Name not a string.', name)
         }
     }
 
     /**
-     * @function setTraceBaseMode(enable,action)
+     * @function setAlias(alias)
+     * @desc 設定別名
+     */
+
+    setAlias(alias) {
+        if (typeof alias === "string") {
+            this.alias = '-' + alias
+        } else {
+            this.$systemError('setAlias', 'Name not a string.', alias)
+        }
+    }
+
+    /**
+     * @function setTraceBaseMode(enable,action,options)
      * @desc 鹼基追蹤模式，將每個template的鹼基變化紀錄下來，這功能將吞噬你的效能，僅適用於測試
      * @param {function} action (cloneBase, nowStatus)
      */
 
-    setTraceBaseMode(enable, action) {
-        if (typeof enable === "boolean" && typeof action === "function") {
-            if (enable) {
-                this.mode.traceBase = { action }
-            }
-        } else {
-            this.$systemError('setTraceBaseMode', 'Params type error. try setTraceBaseMode(boolean, function)')
-        }
+    setTraceBaseMode(enable, action, options = {}) {
+        this.mode.set('trace-base-mode', { enable, action, ...options })
     }
 
     /** 
-     * @function setTimeoutMode(enable,millisecond,action)
+     * @function setTimeoutMode(enable,ms,action,options)
      * @desc 設定逾時事件
      * @param {function} action (base, exit, fail)
      */
 
-    setTimeoutMode(enable, millisecond, action) {
-        if (typeof enable === "boolean" && typeof millisecond === "number" && typeof action === "function") {
-            if (enable) {
-                this.mode.timeout = { action, millisecond }
-            }
-        } else {
-            this.$systemError('setTimeout', 'Params type error. try setTimeoutMode(boolean, number, function)')
-        }
+    setTimeoutMode(enable, ms, action, options = {}) {
+        this.mode.set('timeout', { enable, ms, action, ...options })
     }
 
     /** 
-     * @function setCatchExceptionMode(enable,action)
+     * @function setCatchExceptionMode(enable,action,options)
      * @desc 設定捕捉Exception模式，這功能將吞噬你的效能，僅適用於測試
      * @param {function} action (base, exception, exit, fail)
      */
 
-    setCatchExceptionMode(enable, action){
-        if (typeof enable === "boolean" && typeof action === "function") {
-            if (enable) {
-                this.mode.catchException = { action }
-            }
-        } else {
-            this.$systemError('setCatchExceptionMode', 'Params type error, try setCatchExceptionMode(boolean, function).')
-        }
+    setCatchExceptionMode(enable, action, options = {}){
+        this.mode.set('try-catch-mode', { enable, action, ...options })
     }
 
     /**
-     * @function setCatchUncaughtExceptionMode(enable,action)
+     * @function setCatchUncaughtExceptionMode(enable,action,options)
      * @desc 設定捕捉未捕獲Exception模式
      * @param {function} action (base, exception, exit, fail)
      */
 
-    setCatchUncaughtExceptionMode(enable, action) {
-        if (typeof enable === "boolean" && typeof action === "function") {
-            if (enable) {
-                this.mode.catchUncaughtException = { action }
-            }
-        } else {
-            this.$systemError('setCatchUncaughtException', 'Params type error, try setCatchUncaughtException(boolean, function).')
-        }
+    setCatchUncaughtExceptionMode(enable, action, options = {}) {
+        this.mode.set('uncaught-exception-mode', { enable, action, ...options })
     }
 
     /**
-     * @function setGenetic(callback)
+     * @function setGenetic(callback,options)
      * @desc 設定遺傳，callback必須回傳一個物件，他將在你執行transcription時將回傳的值賦予base中
      */
 
-    setGenetic(callback){
-        if (typeof callback === "function") {
-            this.genetic = callback
-        } else {
-            this.$systemError('setGenetic', 'Params type error, try setGenetic(callback).')
-        }
+    setGenetic(action, options = {}){
+        this.mode.set('genetic', { enable: true, action, ...options })
     }
 
     /**
@@ -179,45 +158,33 @@ class Gene extends ModuleBase {
     }
 
     /** 
-     * @function setInitiation(initiation)
+     * @function setInitiation(action,options)
      * @desc 設定啟動事件，此事件猶如定義為一個template，必須宣告next才能繼續運行
      * @param {function} initiation (base, skill, next, exit, fail)
      */
 
-    setInitiation(initiation) {
-        if( typeof initiation === 'function' ){
-            this.synthesis.initiation = initiation
-        }else{
-            this.$systemError('setInitiation', 'Params type error, try setInitiation(function).' )
-        }
+    setInitiation(action, options = {}) {
+        this.mode.set('initiation', { enable: true, action, ...options })
     }
 
     /** 
-     * @function setElongation(elongation)
+     * @function setElongation(action,options)
      * @desc 設定延長事件，自動過渡，沒有next也無法處裡非同步資源
      * @param {function} elongation (base, exit, fail)
      */
 
-    setElongation(elongation) {
-        if( typeof elongation === 'function' ){
-            this.synthesis.elongation = elongation
-        }else{
-            this.$systemError('setElongation', 'Params type error, try setElongation(function).' )
-        }
+    setElongation(action, options = {}) {
+        this.mode.set('elongation', { enable: true, action, ...options })
     }
 
     /** 
-     * @function setTermination(termination)
+     * @function setTermination(action,options)
      * @desc 設定結束事件
      * @param {function} termination (base, rootStatus)
      */
 
-    setTermination(termination) {
-        if( typeof termination === 'function' ){
-            this.synthesis.termination = termination
-        }else{
-            this.$systemError('setTermination', 'Params type error, try setTermination(function).' );
-        }
+    setTermination(action, options = {}) {
+        this.mode.set('termination', { enable: true, action, ...options })
     }
 
     /** 

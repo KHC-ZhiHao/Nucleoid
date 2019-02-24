@@ -84,3 +84,23 @@
 * Status => detail : 把某些狀態移至detail
 * Status => message : 在message是Error物件時，顯示stack
 * 移除babel與minify改用uglifyJS，代表版本不再向下支援至es5
+
+## 1.5.2
+
+### NEW
+
+* Gene => setAlias : 一個基於Name後的別名
+* Gene => protect : 保護模式，每一個模式宣告後就不能再改變
+* Operon => 支援繼承的structure
+* Status => getErrorStatus : 只獲取錯誤的狀態
+
+### FIX
+
+* 修正elongation, trace-base的this沒有導向case的bug
+* 修正Each丟進錯誤資料時宣告錯誤
+* 修正auto和timeout衝突的bug
+
+### MODIFY
+
+* 重構Gene與Mode，更嚴格的檢查與更具有擴充性，且更好維護
+* 盡可能統一語法至符合eslint

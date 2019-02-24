@@ -53,14 +53,14 @@ class Root extends ModuleBase {
      */
 
     initBase() {
-        if (this.gene.genetic) {
-            let datas = this.gene.genetic()
-            if (typeof datas === "object") {
-                for (let key in datas) {
-                    this.addBase(key, datas[key])
+        if (this.gene.mode.isEnable('genetic')) {
+            let items = this.gene.mode.use('genetic').action()
+            if (typeof items === "object") {
+                for (let key in items) {
+                    this.addBase(key, items[key])
                 }
             } else {
-                this.$systemError('initBase', 'Genetic retrun not a object', datas)
+                this.$systemError('initBase', 'Genetic retrun not a object', items)
             }
         }
     }
@@ -166,36 +166,21 @@ class Root extends ModuleBase {
      * @function close(success,message,callback)
      * @desc 完成Transcription後，關閉系統
      * @param {boolean} success 系統是否順利結束
-     * @param {boolean} force 是否強行關閉
      * @param {any} message 如果錯誤，是怎樣的錯誤
      */
 
-    close(success, message, force, callback) {
-        let close = () => {
-            this.rootStatus.set(success, message)
-            if (this.interval) {
-                clearInterval(this.interval)
-            }
-            callback()
-        }
-        if (force) {
-            close()
-        } else {
-            this.checkAutoOnload(close)
+    close(success, message) {
+        this.rootStatus.set(success, message)
+        if (this.interval) {
+            clearInterval(this.interval)
         }
     }
 
-    checkAutoOnload(callback) {
+    checkAutoOnload() {
         let check = this.autos.find((auto) => {
             return auto.finish === false
         })
-        if (check == null) {
-            callback()
-        } else {
-            setTimeout(() => {
-                this.checkAutoOnload(callback)
-            }, 10)
-        }
+        return check == null
     }
 
 }

@@ -50,13 +50,13 @@ class Transcription extends ModuleBase {
     }
 
     initTimeoutMode() {
-        if (this.gene.mode.timeout) {
-            let system = this.gene.mode.timeout
+        if (this.gene.mode.isEnable('timeout')) {
+            let timeout = this.gene.mode.use('timeout')
             this.timeoutSystem = setTimeout(() => {
                 this.forceClose = true
                 this.root.createSystemStatus('timeout', true)
-                system.action.bind(this.case)(this.base, this.bind.exit, this.bind.fail)
-            }, system.millisecond)
+                timeout.action.call(this.case, this.base, this.bind.exit, this.bind.fail)
+            }, timeout.ms)
         }
     }
 
@@ -66,12 +66,12 @@ class Transcription extends ModuleBase {
      */
 
     initCatchUncaughtExceptionMode(){
-        if( this.gene.mode.catchUncaughtException ){
+        if (this.gene.mode.isEnable('uncaught-exception-mode')) {
             this.uncaughtExceptionAction = (error) => {
                 let exception = error.stack ? error : error.error
                 this.forceClose = true
                 this.root.createSystemStatus('uncaught exception', true, exception.stack)
-                this.gene.mode.catchUncaughtException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
+                this.gene.mode.use('uncaught-exception-mode').action.call(this.case, this.base, exception, this.bind.exit, this.bind.fail)
             }
             if( this.root.operating === 'node' ){
                 this.uncaughtExceptionDomain = require('domain').create();
@@ -92,8 +92,8 @@ class Transcription extends ModuleBase {
         let generator = function * (){
             let index = 1
             let template = self.templates[0]
-            if( self.gene.synthesis.initiation ){
-                self.gene.synthesis.initiation.bind(self.case)(self.base, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
+            if (self.gene.mode.isEnable('initiation')) {
+                self.gene.mode.use('initiation').action.call(self.case, self.base, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
                 yield
             }
             while (index <= 10000) {
@@ -155,7 +155,7 @@ class Transcription extends ModuleBase {
     /**
      * @function getSkill()
      * @desc 獲取可用技能
-     * @returns {each, auto, cross, polling, addBase, deepClone, newFrag, createFragment}
+     * @returns {each, auto, cross, polling, addBase, deepClone, frag, createFragment}
      */
 
     getSkill() {
@@ -217,18 +217,26 @@ class Transcription extends ModuleBase {
      */
 
     close(success, message, callback) {
-        this.root.close(success, message, this.forceClose, () => {
+        if (this.forceClose) {
+            this.root.close(success, message)
             if (this.timeoutSystem) {
                 clearTimeout(this.timeoutSystem)
             }
-            if (this.gene.mode.catchUncaughtException && this.root.operating !== 'node') {
+            if (this.gene.mode.isEnable('uncaught-exception-mode') && this.root.operating !== 'node') {
                 window.removeEventListener('error', this.uncaughtExceptionAction)
             }
-            if (this.gene.synthesis.termination) {
-                this.gene.synthesis.termination.call(this.case, this.base, this.root.rootStatus);
+            if (this.gene.mode.isEnable('termination')) {
+                this.gene.mode.use('termination').action.call(this.case, this.base, this.root.rootStatus)
             }
             callback()
-        })
+        } else {
+            if (this.root.checkAutoOnload()) {
+                this.forceClose = true
+            }
+            setTimeout(() => {
+                this.close(success, message, callback)
+            }, 5)
+        }
     }
 
     /**
@@ -266,11 +274,11 @@ class Transcription extends ModuleBase {
 
     next(){
         if (this.finish === false) {
-            if (this.gene.mode.traceBase) {
-                this.gene.mode.traceBase.action(this.deepClone(this.root.base), this.status)
+            if (this.gene.mode.isEnable('trace-base-mode')) {
+                this.gene.mode.use('trace-base-mode').action.call(this.case, this.deepClone(this.root.base), this.status)
             }
-            if (this.gene.synthesis.elongation) {
-                this.gene.synthesis.elongation(this.base, this.bind.exit, this.bind.fail)
+            if (this.gene.mode.isEnable('elongation')) {
+                this.gene.mode.use('elongation').action.call(this.case, this.base, this.bind.exit, this.bind.fail)
             }
             setTimeout(()=>{
                 this.synthesis()
@@ -293,15 +301,13 @@ class Transcription extends ModuleBase {
      */
 
     synthesisTryCatchMode(){
-        if( this.gene.mode.catchException ){
+        if (this.gene.mode.isEnable('try-catch-mode')) {
             try{
                 this.synthesisCatchUncaughtExceptionMode()
             } catch (exception) {
-                if (this.gene.mode.catchException) {
-                    this.forceClose = true
-                    this.root.createSystemStatus('error catch', true, exception.stack)
-                    this.gene.mode.catchException.action.bind(this.case)(this.base, exception, this.bind.exit, this.bind.fail)
-                }
+                this.forceClose = true
+                this.root.createSystemStatus('error catch', true, exception.stack)
+                this.gene.mode.use('try-catch-mode').action.call(this.case, this.base, exception, this.bind.exit, this.bind.fail)
                 return false
             }
         } else {
@@ -315,7 +321,7 @@ class Transcription extends ModuleBase {
      */
 
     synthesisCatchUncaughtExceptionMode(){
-        if( this.gene.mode.catchUncaughtException && this.root.operating === "node" ){
+        if (this.gene.mode.isEnable('uncaught-exception-mode') && this.root.operating === "node") {
             this.uncaughtExceptionDomain.run(() => {
                 this.iterator.next()
             });

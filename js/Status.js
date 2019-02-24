@@ -110,6 +110,28 @@ class Status extends ModuleBase{
     }
 
     /**
+     * @function getErrorStatus()
+     * @desc 只獲取錯誤狀態並平面化資料
+     */
+
+    getErrorStatus() {
+        let data = this.inspect(this.get())
+        let output = []
+        let action = function(status, start) {
+            if (status.success === false) {
+                output.push(status)
+            }
+            for (let child of status.children) {
+                action(child)
+            }
+            if (start) {
+                return output
+            }
+        }
+        return action(data, true)
+    }
+
+    /**
      * @function json()
      * @desc 取得序列化參數並轉為json文本
      */
