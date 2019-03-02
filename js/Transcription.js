@@ -1,5 +1,5 @@
 /**
- * @class Transcription(gene)
+ * @class Transcription
  * @desc 轉譯gene並輸出messenger，他會在運行Gene Transcription實例化，保護其不被更改到
  */
 
@@ -13,8 +13,8 @@ class Transcription extends ModuleBase {
         this.finish = false
         this.reject = reject
         this.resolve = resolve
+        this.templates = this.gene.templates.concat(this.gene.lastTemplates)
         this.forceClose = false
-        this.templates = this.gene.templates
         this.init()
         this.synthesis()
     }
@@ -27,12 +27,22 @@ class Transcription extends ModuleBase {
         return this.root.base
     }
 
+    /**
+     * @function init
+     * @desc 初始化狀態
+     */
+
     init() {
         this.initBind()
         this.initTimeoutMode()
         this.initGenerator()
         this.initCatchUncaughtExceptionMode()
     }
+
+    /**
+     * @function initBind
+     * @desc 初始化綁定狀態
+     */
 
     initBind() {
         this.bind = {
@@ -48,6 +58,11 @@ class Transcription extends ModuleBase {
             createFragment: this.root.createFragment.bind(this.root)
         }
     }
+
+    /**
+     * @function initTimeoutMode
+     * @desc 初始化愈時處理
+     */
 
     initTimeoutMode() {
         if (this.gene.mode.isEnable('timeout')) {
@@ -113,43 +128,14 @@ class Transcription extends ModuleBase {
                             self.bind.next()
                             self.root.setTargetStatus(null)
                         }
-                        template.action.bind(self.case)(self.base, self.getSkill(), next, self.bind.exit, self.bind.fail)
+                        template.action.call(self.case, self.base, self.getSkill(), next, self.bind.exit, self.bind.fail)
                     }
                 }
                 yield
             }
             return
         }
-        this.iterator = generator();
-    }
-
-    /**
-     * @function deepClone(obj)
-     * @desc 深拷貝一個物件，並回傳此物件
-     */
-
-    deepClone(obj, hash = new WeakMap()) {
-        if (Object(obj) !== obj) {
-            return obj
-        }
-        if (obj instanceof Set) {
-            return new Set(obj)
-        }
-        if (hash.has(obj)) {
-            return hash.get(obj)
-        }
-        const result = obj instanceof Date ? new Date(obj) : obj instanceof RegExp ? new RegExp(obj.source, obj.flags) : Object.create(null)
-        hash.set(obj, result)
-        if (obj instanceof Map) {
-            Array.from(obj, ([key, val]) => {
-                result.set(key, this.deepClone(val, hash))
-            })
-        }
-        return Object.assign(result, ...Object.keys(obj).map((key) => {
-            return ({
-                [key]: this.deepClone(obj[key], hash)
-            })
-        }))
+        this.iterator = generator()
     }
 
     /**
@@ -166,7 +152,7 @@ class Transcription extends ModuleBase {
             cross: this.bind.cross,
             polling: this.bind.polling,
             addBase: this.bind.addBase,
-            deepClone: this.deepClone,
+            deepClone: Supports.deepClone,
             setStatusAttr: this.bind.setStatusAttr,
             setRootStatusAttr: this.bind.setRootStatusAttr,
             createFragment: this.bind.createFragment
@@ -235,7 +221,7 @@ class Transcription extends ModuleBase {
             }
             setTimeout(() => {
                 this.close(success, message, callback)
-            }, 5)
+            }, 10)
         }
     }
 
@@ -275,7 +261,7 @@ class Transcription extends ModuleBase {
     next(){
         if (this.finish === false) {
             if (this.gene.mode.isEnable('trace-base-mode')) {
-                this.gene.mode.use('trace-base-mode').action.call(this.case, this.deepClone(this.root.base), this.status)
+                this.gene.mode.use('trace-base-mode').action.call(this.case, Supports.deepClone(this.base), this.status)
             }
             if (this.gene.mode.isEnable('elongation')) {
                 this.gene.mode.use('elongation').action.call(this.case, this.base, this.bind.exit, this.bind.fail)

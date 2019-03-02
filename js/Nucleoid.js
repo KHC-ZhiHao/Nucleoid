@@ -16,6 +16,16 @@ class Nucleoid {
     }
 
     /**
+     * @function isGene(gene)
+     * @static
+     * @desc 驗證該模組是否為基因
+     */
+
+    static isGene(gene) {
+        return gene instanceof Gene
+    }
+
+    /**
      * @function createOperon(type,options)
      * @static
      * @desc 建立Operon

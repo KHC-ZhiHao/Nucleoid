@@ -1,5 +1,5 @@
 /**
- * @class PollingEvent(root,options)
+ * @class PollingEvent
  * @desc 輪循的事件單位
  */
 
@@ -36,7 +36,7 @@ class PollingEvent extends ModuleBase {
 }
 
 /**
- * @class Fragment(root,name)
+ * @class Fragment
  * @desc 建立一個片段，你可以一次加入多個排程，他將會同時進行並等待回傳onload
  */
 
@@ -83,7 +83,6 @@ class Fragment extends ModuleBase {
 
     /**
      * @function add(options)
-     * @public
      * @desc 加入一個排程
      * @param {object} options {name:string, action:function} 
      */
@@ -97,7 +96,6 @@ class Fragment extends ModuleBase {
 
     /**
      * @function eachAdd(target,name,action)
-     * @public
      * @desc 迭代加入frag
      */
 
@@ -164,7 +162,6 @@ class Fragment extends ModuleBase {
 
     /**
      * @function activate(callback)
-     * @public
      * @callback (error,onload)
      */
 
@@ -185,7 +182,7 @@ class Fragment extends ModuleBase {
 }
 
 /**
- * @class Auto(root, options)
+ * @class Auto
  * @desc 建立一個獨立的非同步執行續，在宣告結束前transcription不會結束
  */
 
@@ -201,10 +198,20 @@ class Auto extends ModuleBase {
         this.init()
     }
 
+    /**
+     * @function init
+     * @desc 初始化狀態
+     */
+
     init() {
         this.root.status.addChildren(this.status)
         this.action(this.error.bind(this), this.onload.bind(this))
     }
+
+    /**
+     * @function createAction
+     * @desc 建立自動化行為
+     */
 
     createAction(action) {
         if (typeof action !== 'function') {
@@ -215,10 +222,20 @@ class Auto extends ModuleBase {
         }
     }
 
+    /**
+     * @function error
+     * @desc 自動化行為出錯
+     */
+
     error(error) {
         this.finish = true
         this.status.set(false, error)
     }
+
+    /**
+     * @function onload
+     * @desc 自動化行為執行完畢
+     */
 
     onload() {
         this.finish = true

@@ -1,3 +1,9 @@
+
+/**
+ * @class Mode
+ * @desc 處理所有基因行為的模塊
+ */
+
 class Mode extends ModuleBase {
 
     constructor() {

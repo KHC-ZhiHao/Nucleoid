@@ -1,0 +1,449 @@
+
+                <!doctype html>
+                <html>
+                <head>
+                    <title>Document</title>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width initial-scale=1.0">
+                    <link rel="stylesheet" href="./app/style/githubmakrerdowm.css">
+                </head>
+                <style>
+                    body{
+                        background-color : #1e1e1e;
+                        color : #FFF;
+                        padding : 16px;
+                    }
+                    h2{ color : #4ec9a6; border-bottom : none; }
+                    h4{ color : #dad7a2; margin-bottom : 3px; }
+                    a{ color : lightblue; }
+                </style>
+                <body>
+                    <div class="view-readme markdown-body"><h1 id="remd-me--">目錄 :</h1>
+<p><a href="#remd-me-supports">Supports
+</a></p>
+<p><a href="#remd-me-modulebase">ModuleBase
+</a></p>
+<p><a href="#remd-me-pollingevent">PollingEvent
+</a></p>
+<p><a href="#remd-me-fragment">Fragment
+</a></p>
+<p><a href="#remd-me-auto">Auto
+</a></p>
+<p><a href="#remd-me-operon">Operon
+</a></p>
+<p><a href="#remd-me-root">Root
+</a></p>
+<p><a href="#remd-me-messenger">Messenger
+</a></p>
+<p><a href="#remd-me-status">Status
+</a></p>
+<p><a href="#remd-me-mode">Mode
+</a></p>
+<p><a href="#remd-me-gene">Gene
+</a></p>
+<p><a href="#remd-me-transcription">Transcription
+</a></p>
+<p><a href="#remd-me-nucleoid">Nucleoid
+</a></p>
+<h2 id="remd-me-supports">Supports</h2>
+<p><span style="width:100%; display:inline-block;">一些可通用的function
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-each-target-callback-">each(target,callback)</h4>
+<p><span style="border-radius:3px; display:inline-block; margin-bottom:12px ; background-color:#687489; color:#FFF; padding:2px 6px; text-align:center">static</span></p>
+<p><span style="width:100%; display:inline-block;">各種迴圈適應
+</span></p>
+<p><span style="color:wheat">callback</span> : <code>(data,index|key)
+=&gt; { do something... }</code></p>
+<h4 id="remd-me-systemerror">systemError</h4>
+<p><span style="border-radius:3px; display:inline-block; margin-bottom:12px ; background-color:#687489; color:#FFF; padding:2px 6px; text-align:center">static</span></p>
+<p><span style="width:100%; display:inline-block;">執出錯誤訊息
+</span></p>
+<h4 id="remd-me-deepclone-obj-">deepClone(obj)</h4>
+<p><span style="border-radius:3px; display:inline-block; margin-bottom:12px ; background-color:#687489; color:#FFF; padding:2px 6px; text-align:center">static</span></p>
+<p><span style="width:100%; display:inline-block;">深拷貝一個物件，並回傳此物件
+</span></p>
+<h4 id="remd-me-inspect-">inspect()</h4>
+<p><span style="border-radius:3px; display:inline-block; margin-bottom:12px ; background-color:#687489; color:#FFF; padding:2px 6px; text-align:center">static</span></p>
+<p><span style="width:100%; display:inline-block;">移除迴圈結構的物件
+</span></p>
+<h2 id="remd-me-modulebase">ModuleBase</h2>
+<p><span style="width:100%; display:inline-block;">系統殼層
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me--systemerror-functionname-maessage-object-">$systemError(functionName,maessage,object)</h4>
+<p><span style="width:100%; display:inline-block;">於console呼叫錯誤，中斷程序並顯示錯誤的物件
+</span></p>
+<h4 id="remd-me--nokey-functionname-target-key-">$noKey(functionName,target,key)</h4>
+<p><span style="width:100%; display:inline-block;">檢查該物件是否含有key
+</span></p>
+<p><span style="color:pink">return</span> : {boolean} 如果沒有，回傳true，如果有則報錯</p>
+<h4 id="remd-me--verify-data-validate-assign-">$verify(data,validate,assign)</h4>
+<p><span style="width:100%; display:inline-block;">驗證並返為一個新的物件，並在空屬性中賦予預設屬性
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">data</font> 驗證目標</p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">validate</font> 驗證物件，value是一個array，內容是[require,default]</p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">assign</font> 返回的物件與指定物件合併</p>
+<h4 id="remd-me--protection-object-key-getter-value-">$protection(object,key,getter,value)</h4>
+<p><span style="width:100%; display:inline-block;">建立一個保護變數
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">object</font> 保護變數必須要有一個目標物件</p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">string</span> <font color="#e30090">key</font> 為目標物建立一個key</p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">getter</font> 這個保護變數被存入的外部物件</p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">any</span> <font color="#e30090">value</font> 變數值</p>
+<h2 id="remd-me-pollingevent">PollingEvent</h2>
+<p><span style="width:100%; display:inline-block;">輪循的事件單位
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-activate-">activate()</h4>
+<p><span style="width:100%; display:inline-block;">每次輪循呼叫一次action
+</span></p>
+<h4 id="remd-me-close-">close()</h4>
+<p><span style="width:100%; display:inline-block;">關閉這個事件，他將在下次輪循時被移除
+</span></p>
+<h2 id="remd-me-fragment">Fragment</h2>
+<p><span style="width:100%; display:inline-block;">建立一個片段，你可以一次加入多個排程，他將會同時進行並等待回傳onload
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-install-callback-">install(callback)</h4>
+<p><span style="width:100%; display:inline-block;">執行activate時初始化
+</span></p>
+<h4 id="remd-me-use-">use()</h4>
+<p><span style="width:100%; display:inline-block;">建立對外接口
+</span></p>
+<h4 id="remd-me-add-options-">add(options)</h4>
+<p><span style="width:100%; display:inline-block;">加入一個排程
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">options</font> {name:string, action:function}</p>
+<h4 id="remd-me-eachadd-target-name-action-">eachAdd(target,name,action)</h4>
+<p><span style="width:100%; display:inline-block;">迭代加入frag
+</span></p>
+<h4 id="remd-me-regstererror-status-">regsterError(status)</h4>
+<p><span style="width:100%; display:inline-block;">註冊每個排程的error事件
+</span></p>
+<h4 id="remd-me-regsteronload-status-">regsterOnload(status)</h4>
+<p><span style="width:100%; display:inline-block;">註冊每個排程的onload事件
+</span></p>
+<h4 id="remd-me-actionthread-thread-">actionThread(thread)</h4>
+<p><span style="width:100%; display:inline-block;">執行一個排程
+</span></p>
+<h4 id="remd-me-activate-callback-">activate(callback)</h4>
+<p><span style="color:wheat">callback</span> : <code>(error,onload)
+=&gt; { do something... }</code></p>
+<h2 id="remd-me-auto">Auto</h2>
+<p><span style="width:100%; display:inline-block;">建立一個獨立的非同步執行續，在宣告結束前transcription不會結束
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-init">init</h4>
+<p><span style="width:100%; display:inline-block;">初始化狀態
+</span></p>
+<h4 id="remd-me-createaction">createAction</h4>
+<p><span style="width:100%; display:inline-block;">建立自動化行為
+</span></p>
+<h4 id="remd-me-error">error</h4>
+<p><span style="width:100%; display:inline-block;">自動化行為出錯
+</span></p>
+<h4 id="remd-me-onload">onload</h4>
+<p><span style="width:100%; display:inline-block;">自動化行為執行完畢
+</span></p>
+<h2 id="remd-me-operon">Operon</h2>
+<p><span style="width:100%; display:inline-block;">統一io狀態的物件
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-validate">validate</h4>
+<p><span style="width:100%; display:inline-block;">驗證Operon結構是否正確
+</span></p>
+<h4 id="remd-me-use">use</h4>
+<p><span style="width:100%; display:inline-block;">使用選擇的Unit
+</span></p>
+<h4 id="remd-me-createcontext">createContext</h4>
+<p><span style="width:100%; display:inline-block;">建立傳入Unit的Context
+</span></p>
+<h4 id="remd-me-useunit-unit-context-">useUnit(unit,context)</h4>
+<p><span style="width:100%; display:inline-block;">使用Unit的邏輯層
+</span></p>
+<h4 id="remd-me-getunit-name-">getUnit(name)</h4>
+<p><span style="width:100%; display:inline-block;">獲取Unit的邏輯層
+</span></p>
+<h4 id="remd-me-exports-">exports()</h4>
+<p><span style="width:100%; display:inline-block;">輸出API
+</span></p>
+<h2 id="remd-me-root">Root</h2>
+<p><span style="width:100%; display:inline-block;">Gene執行Transcription時，掌控Status和Polling的源頭
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-initpolling-">initPolling()</h4>
+<p><span style="width:100%; display:inline-block;">初始化輪尋機制
+</span></p>
+<h4 id="remd-me-initbase-">initBase()</h4>
+<p><span style="width:100%; display:inline-block;">初始化鹼基
+</span></p>
+<h4 id="remd-me-getbase-">getBase()</h4>
+<p><span style="width:100%; display:inline-block;">直接獲取base是不會得到protection物件的
+</span></p>
+<h4 id="remd-me-settargetstatus-status-">setTargetStatus(status)</h4>
+<p><span style="width:100%; display:inline-block;">轉移指定的status對象
+</span></p>
+<h4 id="remd-me-createsystemstatus-name-success-message-">createSystemStatus(name,success,message)</h4>
+<p><span style="width:100%; display:inline-block;">快捷建立一個status至指定的對象中
+</span></p>
+<h4 id="remd-me-addbase-key-value-">addBase(key,value)</h4>
+<p><span style="width:100%; display:inline-block;">加入一個全域屬性
+</span></p>
+<h4 id="remd-me-polling-options-">polling(options)</h4>
+<p><span style="width:100%; display:inline-block;">輪循一個事件
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">options</font> {name:string, action:function}</p>
+<h4 id="remd-me-auto-options-">auto(options)</h4>
+<p><span style="width:100%; display:inline-block;">建立自動執行續
+</span></p>
+<h4 id="remd-me-clearpollingevents-">clearPollingEvents()</h4>
+<p><span style="width:100%; display:inline-block;">清空宣告停止輪循的事件
+</span></p>
+<h4 id="remd-me-createfragment-name-">createFragment(name)</h4>
+<p><span style="width:100%; display:inline-block;">建立一個片段
+</span></p>
+<h4 id="remd-me-close-success-message-callback-">close(success,message,callback)</h4>
+<p><span style="width:100%; display:inline-block;">完成Transcription後，關閉系統
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">boolean</span> <font color="#e30090">success</font> 系統是否順利結束</p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">any</span> <font color="#e30090">message</font> 如果錯誤，是怎樣的錯誤</p>
+<h4 id="remd-me-checkautoonload-">checkAutoOnload()</h4>
+<p><span style="width:100%; display:inline-block;">Auto是否執行完畢
+</span></p>
+<h2 id="remd-me-messenger">Messenger</h2>
+<p><span style="width:100%; display:inline-block;">負責被擲出Gene的物件
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-iserror-">isError()</h4>
+<p><span style="width:100%; display:inline-block;">是否為執行錯誤的Messenger
+</span></p>
+<p><span style="color:pink">return</span> : {boolean}</p>
+<h4 id="remd-me-geterrormessage-">getErrorMessage()</h4>
+<p><span style="width:100%; display:inline-block;">獲取錯誤訊息
+</span></p>
+<p><span style="color:pink">return</span> : {string|null}</p>
+<h4 id="remd-me-getstatustojson-">getStatusToJson()</h4>
+<p><span style="width:100%; display:inline-block;">獲取狀態並轉換成json格式
+</span></p>
+<p><span style="color:pink">return</span> : {string} json file</p>
+<h4 id="remd-me-getmethods-">getMethods()</h4>
+<p><span style="width:100%; display:inline-block;">獲取模式
+</span></p>
+<p><span style="color:pink">return</span> : {array}</p>
+<h2 id="remd-me-status">Status</h2>
+<p><span style="width:100%; display:inline-block;">堆棧狀態
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-getmessage-">getMessage()</h4>
+<p><span style="width:100%; display:inline-block;">獲取該狀態的訊息
+</span></p>
+<h4 id="remd-me-issuccess-">isSuccess()</h4>
+<p><span style="width:100%; display:inline-block;">該狀態是否已成功結束
+</span></p>
+<h4 id="remd-me-addattr-key-value-">addAttr(key,value)</h4>
+<p><span style="width:100%; display:inline-block;">這個屬性會被加入在一個名為attributes的物件內
+</span></p>
+<h4 id="remd-me-installdetail-">installDetail()</h4>
+<p><span style="width:100%; display:inline-block;">顯示更多資訊
+</span></p>
+<h4 id="remd-me-set-success-message-">set(success,message)</h4>
+<p><span style="width:100%; display:inline-block;">當該狀態的模式進行到一個終點，設定成功與否和訊息
+</span></p>
+<h4 id="remd-me-get-">get()</h4>
+<p><span style="width:100%; display:inline-block;">取得該狀態序列化的參數
+</span></p>
+<h4 id="remd-me-geterrorstatus-">getErrorStatus()</h4>
+<p><span style="width:100%; display:inline-block;">只獲取錯誤狀態並平面化資料
+</span></p>
+<h4 id="remd-me-json-">json()</h4>
+<p><span style="width:100%; display:inline-block;">取得序列化參數並轉為json文本
+</span></p>
+<h4 id="remd-me-html-">html()</h4>
+<p><span style="width:100%; display:inline-block;">取得序列化參數並轉成html文本
+</span></p>
+<h4 id="remd-me-addchildren-status-">addChildren(status)</h4>
+<p><span style="width:100%; display:inline-block;">將該status加入一個子狀態
+</span></p>
+<h2 id="remd-me-mode">Mode</h2>
+<p><span style="width:100%; display:inline-block;">處理所有基因行為的模塊
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-init">init</h4>
+<p><span style="width:100%; display:inline-block;">初始化所有事件
+</span></p>
+<h4 id="remd-me-proxy">proxy</h4>
+<p><span style="width:100%; display:inline-block;">保護物件模式
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">object</span> <font color="#e30090">options</font> [require,type,default]</p>
+<h4 id="remd-me-createmode">createMode</h4>
+<p><span style="width:100%; display:inline-block;">為Mode建立一些基礎屬性
+</span></p>
+<h4 id="remd-me-exports">exports</h4>
+<p><span style="width:100%; display:inline-block;">輸出接口
+</span></p>
+<h4 id="remd-me-getused">getUsed</h4>
+<p><span style="width:100%; display:inline-block;">獲取正在使用的mode
+</span></p>
+<h4 id="remd-me-isenable">isEnable</h4>
+<p><span style="width:100%; display:inline-block;">該模式有無被啟用
+</span></p>
+<h4 id="remd-me-hasrequire">hasRequire</h4>
+<p><span style="width:100%; display:inline-block;">檢查必要參數
+</span></p>
+<h4 id="remd-me-use">use</h4>
+<p><span style="width:100%; display:inline-block;">獲取一個模式
+</span></p>
+<h4 id="remd-me-set">set</h4>
+<p><span style="width:100%; display:inline-block;">檢查各種狀況，通過則賦值
+</span></p>
+<h4 id="remd-me-setmode">setMode</h4>
+<p><span style="width:100%; display:inline-block;">個別賦值
+</span></p>
+<h2 id="remd-me-gene">Gene</h2>
+<p><span style="width:100%; display:inline-block;">建立貯列模板與生命週期，為整體流程控制的最高物件
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-setoptions-options-">setOptions(options)</h4>
+<p><span style="width:100%; display:inline-block;">當實體化時帶有options時，執行設定動作
+</span></p>
+<h4 id="remd-me-addname">addName</h4>
+<p><span style="width:100%; display:inline-block;">名稱尾端追加名稱，會一直疊加下去
+</span></p>
+<h4 id="remd-me-setname-name-">setName(name)</h4>
+<p><span style="width:100%; display:inline-block;">設定名稱
+</span></p>
+<h4 id="remd-me-setalias-alias-">setAlias(alias)</h4>
+<p><span style="width:100%; display:inline-block;">設定別名
+</span></p>
+<h4 id="remd-me-settracebasemode-enable-action-options-">setTraceBaseMode(enable,action,options)</h4>
+<p><span style="width:100%; display:inline-block;">鹼基追蹤模式，將每個template的鹼基變化紀錄下來，這功能將吞噬你的效能，僅適用於測試
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">function</span> <font color="#e30090">action</font> (cloneBase, nowStatus)</p>
+<h4 id="remd-me-settimeoutmode-enable-ms-action-options-">setTimeoutMode(enable,ms,action,options)</h4>
+<p><span style="width:100%; display:inline-block;">設定逾時事件
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">function</span> <font color="#e30090">action</font> (base, exit, fail)</p>
+<h4 id="remd-me-setcatchexceptionmode-enable-action-options-">setCatchExceptionMode(enable,action,options)</h4>
+<p><span style="width:100%; display:inline-block;">設定捕捉Exception模式，這功能將吞噬你的效能，僅適用於測試
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">function</span> <font color="#e30090">action</font> (base, exception, exit, fail)</p>
+<h4 id="remd-me-setcatchuncaughtexceptionmode-enable-action-options-">setCatchUncaughtExceptionMode(enable,action,options)</h4>
+<p><span style="width:100%; display:inline-block;">設定捕捉未捕獲Exception模式
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">function</span> <font color="#e30090">action</font> (base, exception, exit, fail)</p>
+<h4 id="remd-me-setgenetic-callback-options-">setGenetic(callback,options)</h4>
+<p><span style="width:100%; display:inline-block;">設定遺傳，callback必須回傳一個物件，他將在你執行transcription時將回傳的值賦予base中
+</span></p>
+<h4 id="remd-me-template-name-action-">template(name,action)</h4>
+<p><span style="width:100%; display:inline-block;">加入一個貯列模版，他將在執行transcription時依宣告順序執行
+</span></p>
+<h4 id="remd-me-setinitiation-action-options-">setInitiation(action,options)</h4>
+<p><span style="width:100%; display:inline-block;">設定啟動事件，此事件猶如定義為一個template，必須宣告next才能繼續運行
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">function</span> <font color="#e30090">initiation</font> (base, skill, next, exit, fail)</p>
+<h4 id="remd-me-setelongation-action-options-">setElongation(action,options)</h4>
+<p><span style="width:100%; display:inline-block;">設定延長事件，自動過渡，沒有next也無法處裡非同步資源
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">function</span> <font color="#e30090">elongation</font> (base, exit, fail)</p>
+<h4 id="remd-me-settermination-action-options-">setTermination(action,options)</h4>
+<p><span style="width:100%; display:inline-block;">設定結束事件
+</span></p>
+<p><span style="color:lightblue">@param</span> : <span style="padding:3px 6px; display:inline-block; color:#8c83af">function</span> <font color="#e30090">termination</font> (base, rootStatus)</p>
+<h4 id="remd-me-cloning-templates-">cloning(templates)</h4>
+<p><span style="width:100%; display:inline-block;">複用template的接口
+</span></p>
+<h4 id="remd-me-cleartemplate-">clearTemplate()</h4>
+<p><span style="width:100%; display:inline-block;">清空模板
+</span></p>
+<h4 id="remd-me-transcription-">transcription()</h4>
+<p><span style="width:100%; display:inline-block;">執行系統，不論錯誤或成功皆會回傳一個Messenger物件
+</span></p>
+<p><span style="color:pink">return</span> : {Promise}</p>
+<h2 id="remd-me-transcription">Transcription</h2>
+<p><span style="width:100%; display:inline-block;">轉譯gene並輸出messenger，他會在運行Gene Transcription實例化，保護其不被更改到
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-init">init</h4>
+<p><span style="width:100%; display:inline-block;">初始化狀態
+</span></p>
+<h4 id="remd-me-initbind">initBind</h4>
+<p><span style="width:100%; display:inline-block;">初始化綁定狀態
+</span></p>
+<h4 id="remd-me-inittimeoutmode">initTimeoutMode</h4>
+<p><span style="width:100%; display:inline-block;">初始化愈時處理
+</span></p>
+<h4 id="remd-me-initcatchuncaughtexceptionmode">initCatchUncaughtExceptionMode</h4>
+<p><span style="width:100%; display:inline-block;">初始化捕捉異步錯誤
+</span></p>
+<h4 id="remd-me-initgenerator-">initGenerator()</h4>
+<p><span style="width:100%; display:inline-block;">初始化一個生成器
+</span></p>
+<h4 id="remd-me-getskill-">getSkill()</h4>
+<p><span style="width:100%; display:inline-block;">獲取可用技能
+</span></p>
+<p><span style="color:pink">return</span> : {each, auto, cross, polling, addBase, deepClone, frag, createFragment}</p>
+<h4 id="remd-me-setrootstatusattr-key-value-">setRootStatusAttr(key,value)</h4>
+<p><span style="width:100%; display:inline-block;">可在skill中定義根狀態
+</span></p>
+<h4 id="remd-me-setstatusattr-key-value-">setStatusAttr(key,value)</h4>
+<p><span style="width:100%; display:inline-block;">可在skill中定義狀態
+</span></p>
+<h4 id="remd-me-cross-gene-callback-">cross(gene,callback)</h4>
+<p><span style="width:100%; display:inline-block;">有時不免俗需要抽出邏輯層，cross可以讓你呼叫外部基因並疊加狀態
+</span></p>
+<p><span style="color:wheat">callback</span> : <code>(error,messenger)
+=&gt; { do something... }</code></p>
+<h4 id="remd-me-close-success-message-callback-">close(success,message,callback)</h4>
+<p><span style="width:100%; display:inline-block;">不論是fail或exit都會處裡的邏輯層
+</span></p>
+<h4 id="remd-me-fail-error-">fail(error)</h4>
+<p><span style="width:100%; display:inline-block;">拒絕並傳遞錯誤
+</span></p>
+<h4 id="remd-me-exit-">exit()</h4>
+<p><span style="width:100%; display:inline-block;">成功並結束模板
+</span></p>
+<h4 id="remd-me-next-">next()</h4>
+<p><span style="width:100%; display:inline-block;">前往下個貯列
+</span></p>
+<h4 id="remd-me-synthesis-">synthesis()</h4>
+<p><span style="width:100%; display:inline-block;">TryCatch與CatchUncaughtException其實需要一個統一的傳遞街口
+</span></p>
+<h4 id="remd-me-synthesistrycatchmode-">synthesisTryCatchMode()</h4>
+<p><span style="width:100%; display:inline-block;">開啟TryCatch模式
+</span></p>
+<h4 id="remd-me-synthesiscatchuncaughtexceptionmode-">synthesisCatchUncaughtExceptionMode()</h4>
+<p><span style="width:100%; display:inline-block;">開啟CatchUncaughtException模式
+</span></p>
+<h2 id="remd-me-nucleoid">Nucleoid</h2>
+<p><span style="width:100%; display:inline-block;">掌控整個系統組成的核心物件，為建立Gene的接口
+</span></p>
+<hr>
+<h3 id="remd-me-function">Function</h3>
+<h4 id="remd-me-creategene-name-">createGene(name)</h4>
+<p><span style="border-radius:3px; display:inline-block; margin-bottom:12px ; background-color:#687489; color:#FFF; padding:2px 6px; text-align:center">static</span></p>
+<p><span style="width:100%; display:inline-block;">建立一個Gene
+</span></p>
+<h4 id="remd-me-isgene-gene-">isGene(gene)</h4>
+<p><span style="border-radius:3px; display:inline-block; margin-bottom:12px ; background-color:#687489; color:#FFF; padding:2px 6px; text-align:center">static</span></p>
+<p><span style="width:100%; display:inline-block;">驗證該模組是否為基因
+</span></p>
+<h4 id="remd-me-createoperon-type-options-">createOperon(type,options)</h4>
+<p><span style="border-radius:3px; display:inline-block; margin-bottom:12px ; background-color:#687489; color:#FFF; padding:2px 6px; text-align:center">static</span></p>
+<p><span style="width:100%; display:inline-block;">建立Operon
+</span></p>
+</div>
+                </body>
+            

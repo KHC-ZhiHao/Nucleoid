@@ -1,5 +1,5 @@
 /**
- * @class Gene(name)
+ * @class Gene
  * @desc 建立貯列模板與生命週期，為整體流程控制的最高物件
  */
 

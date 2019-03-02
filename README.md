@@ -580,5 +580,7 @@ Nodejs 8+ or support ES6 browser.
 ## 其他
 [版本日誌](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/version.md)
 
+[開發者文件](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/document.html)
+
 [npm-image]: https://img.shields.io/npm/v/nucleoid.svg
 [npm-url]: https://npmjs.org/package/nucleoid

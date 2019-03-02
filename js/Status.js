@@ -1,5 +1,5 @@
 /**
- * @class Status()
+ * @class Status
  * @desc 堆棧狀態
  */
 
@@ -20,6 +20,24 @@ class Status extends ModuleBase{
 
     get operationTime() {
         return (this.finishTime || Date.now()) - this.startTime
+    }
+
+    /**
+     * @function getMessage()
+     * @desc 獲取該狀態的訊息
+     */
+
+    getMessage() {
+        return this.message || 'no message'
+    }
+
+    /**
+     * @function isSuccess()
+     * @desc 該狀態是否已成功結束
+     */
+
+    isSuccess() {
+        return this.success
     }
 
     /**
@@ -81,41 +99,12 @@ class Status extends ModuleBase{
     }
 
     /**
-     * @function inspect()
-     * @desc 移除迴圈結構的物件
-     */
-
-    inspect(target, used = []) {
-        if (target == null) {
-            return null
-        }
-        let output = Array.isArray(target) ? [] : {}
-        for (let key in target) {
-            let aims = target[key]
-            let type = typeof aims
-            if (type === 'function') {
-                continue
-            } else if (type === 'object') {
-                let newUsed = [target].concat(used)
-                if (newUsed.includes(aims)) {
-                    output[key] = 'Circular structure object.'
-                } else {
-                    output[key] = this.inspect(aims, newUsed)
-                }
-            } else {
-                output[key] = aims
-            }
-        }
-        return output
-    }
-
-    /**
      * @function getErrorStatus()
      * @desc 只獲取錯誤狀態並平面化資料
      */
 
     getErrorStatus() {
-        let data = this.inspect(this.get())
+        let data = Supports.inspect(this.get())
         let output = []
         let action = function(status, start) {
             if (status.success === false) {
@@ -137,7 +126,7 @@ class Status extends ModuleBase{
      */
 
     json() {
-        let data = this.inspect(this.get())
+        let data = Supports.inspect(this.get())
         return JSON.stringify(data, null, 4)
     }
 
@@ -147,7 +136,7 @@ class Status extends ModuleBase{
      */
 
     html() {
-        let data = this.inspect(this.get())
+        let data = Supports.inspect(this.get())
         let createCard = function(status) {
             let border = `solid 1px ${status.success ? 'blue' : 'red'}`
             let html = `<div style="padding:5px; margin: 5px; border:${border}">`

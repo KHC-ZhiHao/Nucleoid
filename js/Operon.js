@@ -1,3 +1,8 @@
+/**
+ * @class Operon
+ * @desc 統一io狀態的物件
+ */
+
 class Operon extends ModuleBase {
 
     constructor(options) {
@@ -13,6 +18,11 @@ class Operon extends ModuleBase {
         return this.data.units
     }
 
+    /**
+     * @function validate
+     * @desc 驗證Operon結構是否正確
+     */
+
     validate() {
         if (Array.isArray(this.data.structure) === false) {
             this.$systemError('validate', `Structure not a array.`, this.data.structure)
@@ -22,7 +32,7 @@ class Operon extends ModuleBase {
             if (unit.constructor == null || unit.prototype == null) {
                 this.$systemError('validate', 'Unit not a constructor.', key)
             }
-            let prototypes = Object.getOwnPropertyNames(unit.prototype)
+            let prototypes = Supports.getAllPrototype(unit)
             for (let name of this.data.structure) {
                 if (prototypes.includes(name) === false) {
                     this.$systemError('validate', `Property(${name}) not found.`, name)
@@ -31,11 +41,21 @@ class Operon extends ModuleBase {
         }
     }
 
+    /**
+     * @function use
+     * @desc 使用選擇的Unit
+     */
+
     use(name, options) {
         let context = this.createContext(name, options)
         let unit = this.getUnit(name)
         return this.useUnit(unit, context)
     }
+
+    /**
+     * @function createContext
+     * @desc 建立傳入Unit的Context
+     */
 
     createContext(name, options) {
         return {
@@ -43,6 +63,11 @@ class Operon extends ModuleBase {
             useName: name
         }
     }
+
+    /**
+     * @function useUnit(unit,context)
+     * @desc 使用Unit的邏輯層
+     */
 
     useUnit(unit, context) {
         let target = new unit(context)
@@ -53,6 +78,11 @@ class Operon extends ModuleBase {
         return output
     }
 
+    /**
+     * @function getUnit(name)
+     * @desc 獲取Unit的邏輯層
+     */
+
     getUnit(name) {
         if (this.data.units[name]) {
             return this.data.units[name]
@@ -61,23 +91,15 @@ class Operon extends ModuleBase {
         }
     }
 
+    /**
+     * @function exports()
+     * @desc 輸出API
+     */
+
     exports() {
         return {
             use: this.use.bind(this)
         }
     }
 
-}
-
-function getAllPrototype(target) {
-    let prototypes = []
-    if (target.prototype) {
-        prototypes = Object.getOwnPropertyNames(target.prototype)
-    }
-    if (target.__proto__) {
-        prototypes = prototypes.concat(getAllPrototype(target.__proto__))
-    }
-    return prototypes.filter((text, index, arr) => {
-        return arr.indexOf(text) === index && text !== 'constructor'
-    })
 }

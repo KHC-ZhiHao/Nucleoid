@@ -1,5 +1,5 @@
 /**
- * @class ModuleBase()
+ * @class ModuleBase
  * @desc 系統殼層
  */
 

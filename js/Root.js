@@ -176,6 +176,11 @@ class Root extends ModuleBase {
         }
     }
 
+    /**
+     * @function checkAutoOnload()
+     * @desc Auto是否執行完畢
+     */
+
     checkAutoOnload() {
         let check = this.autos.find((auto) => {
             return auto.finish === false

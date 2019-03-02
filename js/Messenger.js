@@ -1,3 +1,8 @@
+/**
+ * @class Messenger
+ * @desc 負責被擲出Gene的物件
+ */
+
 class Messenger {
 
     constructor(root) {
@@ -5,7 +10,7 @@ class Messenger {
         this.base = root.base
         this.gene = root.gene
         this.status = root.rootStatus
-        this.success = root.rootStatus.success
+        this.success = root.rootStatus.isSuccess()
         this.getBase = root.getBase
     }
 
@@ -26,7 +31,7 @@ class Messenger {
      */
 
     getErrorMessage() {
-        return this.isError ? this.status.message : null
+        return this.isError ? this.status.getMessage() : null
     }
 
     /**
