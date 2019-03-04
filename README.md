@@ -27,7 +27,7 @@ Nucleoid is a Promise based process control system. The early purpose was to mak
 #### html
 
 ```html
-<script src="./dist/Nucleoid.js"></script>
+<script src="https://khc-zhihao.github.io/Nucleoid/dist/index.js"></script>
 ```
 
 #### node
@@ -580,7 +580,7 @@ Nodejs 8+ or support ES6 browser.
 ## 其他
 [版本日誌](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/version.md)
 
-[開發者文件](https://github.com/KHC-ZhiHao/Nucleoid/blob/master/document/document.html)
+[開發者文件](https://khc-zhihao.github.io/Nucleoid/document/document.html)
 
 [npm-image]: https://img.shields.io/npm/v/nucleoid.svg
 [npm-url]: https://npmjs.org/package/nucleoid

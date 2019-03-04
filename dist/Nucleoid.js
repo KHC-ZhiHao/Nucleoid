@@ -1462,8 +1462,10 @@
             this.finish = false
             this.reject = reject
             this.resolve = resolve
-            this.templates = this.gene.templates.concat(this.gene.lastTemplates)
+            this.templates = this.gene.templates.slice()
+            this.modeEnable = this.gene.mode.isEnable
             this.forceClose = false
+            this.stackOverflow = 0
             this.init()
             this.synthesis()
         }
@@ -1483,9 +1485,25 @@
 
         init() {
             this.initBind()
+            this.initSkill()
+            this.initIterator()
             this.initTimeoutMode()
-            this.initGenerator()
             this.initCatchUncaughtExceptionMode()
+        }
+
+        initSkill() {
+            this.skill = {
+                each: Supports.each,
+                auto: this.bind.auto,
+                frag: this.bind.createFragment,
+                cross: this.bind.cross,
+                polling: this.bind.polling,
+                addBase: this.bind.addBase,
+                deepClone: Supports.deepClone,
+                setStatusAttr: this.bind.setStatusAttr,
+                setRootStatusAttr: this.bind.setRootStatusAttr,
+                createFragment: this.bind.createFragment
+            }
         }
 
         /**
@@ -1514,7 +1532,7 @@
          */
 
         initTimeoutMode() {
-            if (this.gene.mode.isEnable('timeout')) {
+            if (this.modeEnable('timeout')) {
                 let timeout = this.gene.mode.use('timeout')
                 this.timeoutSystem = setTimeout(() => {
                     this.forceClose = true
@@ -1530,7 +1548,7 @@
          */
 
         initCatchUncaughtExceptionMode() {
-            if (this.gene.mode.isEnable('uncaught-exception-mode')) {
+            if (this.modeEnable('uncaught-exception-mode')) {
                 this.uncaughtExceptionAction = (error) => {
                     let exception = error.stack ? error : error.error
                     this.forceClose = true
@@ -1546,65 +1564,32 @@
             }
         }
 
-        /**
-         * @function initGenerator()
-         * @desc 初始化一個生成器
-         */
-
-        initGenerator() {
-            let self = this
-            let generator = function* () {
-                let index = 1
-                let template = self.templates[0]
-                if (self.gene.mode.isEnable('initiation')) {
-                    self.gene.mode.use('initiation').action.call(self.case, self.base, self.getSkill(), self.bind.next, self.bind.exit, self.bind.fail)
-                    yield
-                }
-                while (index <= 10000) {
-                    if (self.finish) {
-                        break
-                    } else {
-                        if (template == null) {
-                            self.bind.exit()
-                        } else {
-                            let status = new Status(template.name, 'template')
-                            self.root.status.addChildren(status)
-                            self.root.setTargetStatus(status)
-                            let next = () => {
-                                next = null
-                                template = self.templates[index++]
-                                status.set(true)
-                                self.bind.next()
-                                self.root.setTargetStatus(null)
-                            }
-                            template.action.call(self.case, self.base, self.getSkill(), next, self.bind.exit, self.bind.fail)
-                        }
-                    }
-                    yield
-                }
-                return
-            }
-            this.iterator = generator()
+        initIterator() {
+            this.iteratorStart = false
         }
 
-        /**
-         * @function getSkill()
-         * @desc 獲取可用技能
-         * @returns {each, auto, cross, polling, addBase, deepClone, frag, createFragment}
-         */
-
-        getSkill() {
-            return {
-                each: Supports.each,
-                auto: this.bind.auto,
-                frag: this.bind.createFragment,
-                cross: this.bind.cross,
-                polling: this.bind.polling,
-                addBase: this.bind.addBase,
-                deepClone: Supports.deepClone,
-                setStatusAttr: this.bind.setStatusAttr,
-                setRootStatusAttr: this.bind.setRootStatusAttr,
-                createFragment: this.bind.createFragment
+        iterator() {
+            if (this.iteratorStart === false && this.modeEnable('initiation')) {
+                this.iteratorStart = true
+                this.gene.mode.use('initiation').action.call(this.case, this.base, this.skill, this.bind.next, this.bind.exit, this.bind.fail)
+                return
+            }
+            let template = this.templates.shift()
+            if (this.finish === false) {
+                if (template == null) {
+                    this.bind.exit()
+                } else {
+                    let status = new Status(template.name, 'template')
+                    let next = () => {
+                        next = null
+                        status.set(true)
+                        this.root.setTargetStatus(null)
+                        this.bind.next()
+                    }
+                    this.root.status.addChildren(status)
+                    this.root.setTargetStatus(status)
+                    template.action.call(this.case, this.base, this.skill, next, this.bind.exit, this.bind.fail)
+                }
             }
         }
 
@@ -1657,10 +1642,10 @@
                 if (this.timeoutSystem) {
                     clearTimeout(this.timeoutSystem)
                 }
-                if (this.gene.mode.isEnable('uncaught-exception-mode') && this.root.operating !== 'node') {
+                if (this.modeEnable('uncaught-exception-mode') && this.root.operating !== 'node') {
                     window.removeEventListener('error', this.uncaughtExceptionAction)
                 }
-                if (this.gene.mode.isEnable('termination')) {
+                if (this.modeEnable('termination')) {
                     this.gene.mode.use('termination').action.call(this.case, this.base, this.root.rootStatus)
                 }
                 callback()
@@ -1709,15 +1694,19 @@
 
         next() {
             if (this.finish === false) {
-                if (this.gene.mode.isEnable('trace-base-mode')) {
+                if (this.modeEnable('trace-base-mode')) {
                     this.gene.mode.use('trace-base-mode').action.call(this.case, Supports.deepClone(this.base), this.status)
                 }
-                if (this.gene.mode.isEnable('elongation')) {
+                if (this.modeEnable('elongation')) {
                     this.gene.mode.use('elongation').action.call(this.case, this.base, this.bind.exit, this.bind.fail)
                 }
-                setTimeout(() => {
+                this.stackOverflow += 1
+                if (this.stackOverflow > 200) {
+                    this.stackOverflow = 0
+                    setTimeout(this.synthesis.bind(this), 1)
+                } else {
                     this.synthesis()
-                }, 1)
+                }
             }
         }
 
@@ -1727,7 +1716,11 @@
          */
 
         synthesis() {
-            this.synthesisTryCatchMode()
+            if (this.modeEnable('try-catch-mode')) {
+                this.synthesisTryCatchMode()
+            } else {
+                this.synthesisCatchUncaughtExceptionMode()
+            }
         }
 
         /**
@@ -1736,17 +1729,13 @@
          */
 
         synthesisTryCatchMode() {
-            if (this.gene.mode.isEnable('try-catch-mode')) {
-                try {
-                    this.synthesisCatchUncaughtExceptionMode()
-                } catch (exception) {
-                    this.forceClose = true
-                    this.root.createSystemStatus('error catch', true, exception.stack)
-                    this.gene.mode.use('try-catch-mode').action.call(this.case, this.base, exception, this.bind.exit, this.bind.fail)
-                    return false
-                }
-            } else {
+            try {
                 this.synthesisCatchUncaughtExceptionMode()
+            } catch (exception) {
+                this.forceClose = true
+                this.root.createSystemStatus('error catch', true, exception.stack)
+                this.gene.mode.use('try-catch-mode').action.call(this.case, this.base, exception, this.bind.exit, this.bind.fail)
+                return false
             }
         }
 
@@ -1756,12 +1745,12 @@
          */
 
         synthesisCatchUncaughtExceptionMode() {
-            if (this.gene.mode.isEnable('uncaught-exception-mode') && this.root.operating === "node") {
+            if (this.modeEnable('uncaught-exception-mode') && this.root.operating === "node") {
                 this.uncaughtExceptionDomain.run(() => {
-                    this.iterator.next()
-                });
+                    this.iterator()
+                })
             } else {
-                this.iterator.next()
+                this.iterator()
             }
         }
 

@@ -115,3 +115,13 @@
 ### FIX
 
 * Operon => 支援繼承無效修正
+
+## 1.5.4
+
+### FIX
+
+* Transcription => Template concat修正
+
+### MODIFY
+
+* 重構Transcription

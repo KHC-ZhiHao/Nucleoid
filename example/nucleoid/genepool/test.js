@@ -1,6 +1,6 @@
 const Nucleoid = require('nucleoid')
 
-module.exports = Nucleoid.createGene('event', {
+module.exports = Nucleoid.createGene('test', {
 
     timeoutMode: {
         ms: 20000,
@@ -12,7 +12,7 @@ module.exports = Nucleoid.createGene('event', {
     },
 
     catchMode: {
-        enable: true,
+        enable: false,
         action: (base, exception, exit, fail) => {
             base.$error = exception.stack
             exit()
