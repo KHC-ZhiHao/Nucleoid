@@ -125,3 +125,11 @@
 ### MODIFY
 
 * 重構Transcription
+
+## 1.5.5
+
+### NEW
+
+* Nucleoid => isMessenger : 檢查一個物件使否是messenger
+* Nucleoid => isStatus : 檢查一個物件使否是status
+* Book上線啦

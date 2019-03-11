@@ -6,7 +6,7 @@ module.exports = Nucleoid.createGene('event', {
         ms: 55000,
         enable: true,
         action: (base, exit, fail) => {
-            base.$io.set(1)
+            base.$io.set(false, 'time out')
             exit()
         }
     },
@@ -14,7 +14,7 @@ module.exports = Nucleoid.createGene('event', {
     catchMode: {
         enable: false,
         action: (base, exception, exit, fail) => {
-            base.$io.set(2)
+            base.$io.set(false, exception.message)
             exit()
         }
     },
@@ -22,7 +22,7 @@ module.exports = Nucleoid.createGene('event', {
     uncaughtCatchMode: {
         enable: true,
         action: (base, exception, exit, fail) => {
-            base.$io.set(2)
+            base.$io.set(false, exception.message)
             exit()
         }
     },
@@ -40,7 +40,7 @@ module.exports = Nucleoid.createGene('event', {
             if (base.$io.check()) {
                 next()
             } else {
-                base.$io.set(3)
+                base.$io.set(false, 'Check error')
                 exit()
             }
         }

@@ -16,6 +16,25 @@ class Nucleoid {
     }
 
     /**
+     * @function isMessenger(messenger)
+     * @static
+     * @desc 驗證該模組是否為messenger
+     */
+
+    static isMessenger(messenger) {
+        return messenger instanceof Messenger
+    }
+    /**
+     * @function isStatus(status)
+     * @static
+     * @desc 驗證該模組是否為status
+     */
+
+    static isStatus(status) {
+        return status instanceof Status
+    }
+
+    /**
      * @function isGene(gene)
      * @static
      * @desc 驗證該模組是否為基因

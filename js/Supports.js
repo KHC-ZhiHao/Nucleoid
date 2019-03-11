@@ -115,6 +115,12 @@ class Supports {
         return output
     }
 
+    /**
+     * @function getAllPrototype()
+     * @static
+     * @desc 獲取所有含繼承的propotype
+     */
+
     static getAllPrototype(target) {
         let prototypes = []
         if (target.prototype) {
