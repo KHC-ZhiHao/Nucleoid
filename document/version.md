@@ -133,3 +133,15 @@
 * Nucleoid => isMessenger : 檢查一個物件使否是messenger
 * Nucleoid => isStatus : 檢查一個物件使否是status
 * Book上線啦
+
+## 1.5.6
+
+### NEW
+
+* Skill => frag => setError : 一個錯誤執行的接口
+* Skill => frag => add : add會回傳exports
+* Skill => scan : 統一呼叫的函式列
+
+### FIX
+
+* frag => error : 修正錯誤如果是null在status輸出不會出現unknown error

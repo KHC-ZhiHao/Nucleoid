@@ -47,8 +47,15 @@ class Fragment extends ModuleBase {
         this.over = 0
         this.name = name || 'no name'
         this.stop = false
+        this.error = null
         this.status = new Status(this.name, 'fragment')
         this.thread = []
+        this.exports = {
+            add: this.add.bind(this),
+            eachAdd: this.eachAdd.bind(this),
+            activate: this.activate.bind(this),
+            setError: this.setError.bind(this)
+        }
         root.status.addChildren(this.status)
     }
 
@@ -74,11 +81,7 @@ class Fragment extends ModuleBase {
      */
 
     use() {
-        return {
-            add: this.add.bind(this),
-            eachAdd: this.eachAdd.bind(this),
-            activate: this.activate.bind(this)
-        }
+        return this.exports
     }
 
     /**
@@ -92,6 +95,7 @@ class Fragment extends ModuleBase {
             name: [true, '#string'],
             action: [true, '#function'] 
         }))
+        return this.use()
     }
 
     /**
@@ -112,6 +116,20 @@ class Fragment extends ModuleBase {
     }
 
     /**
+     * @function setError()
+     * @desc 註冊每個排程的error事件並回傳export
+     */
+
+    setError(callback) {
+        if (typeof callback === 'function') {
+            this.error = callback
+        } else {
+            this.$systemError('setError', 'Callback not a function')
+        }
+        return this.use()
+    }
+
+    /**
      * @function regsterError(status)
      * @desc 註冊每個排程的error事件
      */
@@ -119,9 +137,13 @@ class Fragment extends ModuleBase {
     regsterError(status) {
         return (error) => {
             if( this.stop === false ){
-                status.set(false, error)
+                let message = error || 'unknown error'
+                status.set(false, message)
                 this.stop = true
-                this.callback(error || 'unknown error')
+                if (this.error) {
+                    this.error(message)
+                }
+                this.callback(message)
             }
         }
     }

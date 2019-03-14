@@ -39,7 +39,7 @@ class Supports {
             }
             return
         }
-        Supports.systemError("Supports", "each", "Each only support object, array, number.", target);
+        Supports.systemError("Supports", "each", "Each only support object, array, number.", target)
     }
 
     /**
@@ -132,6 +132,25 @@ class Supports {
         return prototypes.filter((text, index, arr) => {
             return arr.indexOf(text) === index && text !== 'constructor'
         })
+    }
+
+    /**
+     * @function scan()
+     * @static
+     * @desc 複合宣告函式列
+     */
+
+    static scan(...params) {
+        for (let param of params) {
+            if (typeof param !== 'function') {
+                Supports.systemError("Supports", "scan", "Param not a function.", param)
+            }
+        }
+        return function(...args) {
+            for (let param of params) {
+                param(...args)
+            }
+        }
     }
 
 }

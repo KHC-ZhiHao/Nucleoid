@@ -44,6 +44,7 @@ class Transcription extends ModuleBase {
 
     initSkill() {
         this.skill = {
+            scan: Supports.scan,
             each: Supports.each,
             auto: this.bind.auto,
             frag: this.bind.createFragment,
