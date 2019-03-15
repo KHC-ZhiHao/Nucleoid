@@ -34,11 +34,11 @@ npm i nucleoid
 const Nucleoid = require('nucleoid')
 Nucleoid.createGene('my first gene', {
     templates: {
-        'first template': (base, skill, next, exit, fail) => {
+        'first template': (base, enzy, next, exit, fail) => {
             base.start = true
             next()
         },
-        'next template': (base, skill, next, exit, fail) => {
+        'next template': (base, enzy, next, exit, fail) => {
             base.next = true
             next()
         }

@@ -153,4 +153,23 @@ class Supports {
         }
     }
 
+    /**
+     * @function pump()
+     * @static
+     * @desc 累積式函數宣告
+     */
+
+    static pump(total, callback) {
+        if (typeof total !== 'number' || typeof callback !== 'function') {
+            Supports.systemError("Supports", "pump", "Param type error, try use (number, function).")
+        }
+        let count = 0
+        return function() {
+            count += 1
+            if (count === total) {
+                callback()
+            }
+        }
+    }
+
 }

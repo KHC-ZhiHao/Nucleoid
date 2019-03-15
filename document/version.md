@@ -145,3 +145,9 @@
 ### FIX
 
 * frag => error : 修正錯誤如果是null在status輸出不會出現unknown error
+
+## 1.5.7
+
+### NEW
+
+* Skill => pump : 累積式函數宣告

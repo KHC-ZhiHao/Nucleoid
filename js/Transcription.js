@@ -44,6 +44,7 @@ class Transcription extends ModuleBase {
 
     initSkill() {
         this.skill = {
+            pump: Supports.pump,
             scan: Supports.scan,
             each: Supports.each,
             auto: this.bind.auto,
