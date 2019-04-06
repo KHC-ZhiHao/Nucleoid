@@ -151,3 +151,9 @@
 ### NEW
 
 * Skill => pump : 累積式函數宣告
+
+## 1.5.8
+
+### NEW
+
+* Skill => frag => setSuccess : 一個成功執行的接口

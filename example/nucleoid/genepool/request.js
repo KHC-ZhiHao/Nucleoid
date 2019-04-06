@@ -1,6 +1,4 @@
-const Nucleoid = require('nucleoid')
-
-module.exports = Nucleoid.createGene('request', {
+module.exports = {
 
     timeoutMode: {
         ms: 20000,
@@ -50,4 +48,4 @@ module.exports = Nucleoid.createGene('request', {
         }
     }
 
-})
+}

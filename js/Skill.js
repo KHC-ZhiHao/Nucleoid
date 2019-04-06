@@ -48,13 +48,15 @@ class Fragment extends ModuleBase {
         this.name = name || 'no name'
         this.stop = false
         this.error = null
+        this.success = null
         this.status = new Status(this.name, 'fragment')
         this.thread = []
         this.exports = {
             add: this.add.bind(this),
             eachAdd: this.eachAdd.bind(this),
             activate: this.activate.bind(this),
-            setError: this.setError.bind(this)
+            setError: this.setError.bind(this),
+            setSuccess: this.setSuccess.bind(this)
         }
         root.status.addChildren(this.status)
     }
@@ -130,6 +132,20 @@ class Fragment extends ModuleBase {
     }
 
     /**
+     * @function setSuccess()
+     * @desc 註冊每個排程的success事件並回傳export
+     */
+
+    setSuccess(callback) {
+        if (typeof callback === 'function') {
+            this.success = callback
+        } else {
+            this.$systemError('setSuccess', 'Callback not a function')
+        }
+        return this.use()
+    }
+
+    /**
      * @function regsterError(status)
      * @desc 註冊每個排程的error事件
      */
@@ -160,6 +176,9 @@ class Fragment extends ModuleBase {
             if( this.stop === false ){
                 if( this.over >= this.thread.length ){
                     this.stop = true
+                    if (this.success) {
+                        this.success()
+                    }
                     this.callback()
                 }
             }
