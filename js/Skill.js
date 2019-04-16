@@ -152,7 +152,7 @@ class Fragment extends ModuleBase {
 
     regsterError(status) {
         return (error) => {
-            if( this.stop === false ){
+            if (this.stop === false) {
                 let message = error || 'unknown error'
                 status.set(false, message)
                 this.stop = true
@@ -173,8 +173,8 @@ class Fragment extends ModuleBase {
         return () => {
             status.set(true)
             this.over += 1
-            if( this.stop === false ){
-                if( this.over >= this.thread.length ){
+            if (this.stop === false) {
+                if (this.over >= this.thread.length) {
                     this.stop = true
                     if (this.success) {
                         this.success()
@@ -212,7 +212,8 @@ class Fragment extends ModuleBase {
         for (let i = 0; i < length; i++) {
             this.actionThread(this.thread[i])
         }
-        if( length === 0 ){
+        if (length === 0) {
+            if (this.success) { this.success() }
             this.callback(null)
         }
         this.activate = () => {

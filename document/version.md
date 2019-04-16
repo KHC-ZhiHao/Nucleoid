@@ -157,3 +157,9 @@
 ### NEW
 
 * Skill => frag => setSuccess : 一個成功執行的接口
+
+## 1.5.9
+
+### FIX
+
+* Frag => setSuccess : 修正沒有長度時不會呼叫的錯誤
